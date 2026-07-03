@@ -1,30 +1,7 @@
 # PharmaSeek — Pharmacy Inventory System
 
 A web-based pharmacy inventory management system built with Node.js, Express, and MySQL.  
-Developed as a requirement for **Information Management II** at the University of San Carlos, DCISM.
 
----
-
-## Team Members
-
-- Alegado, Aya Mumiah Nardo
-- Delino, Andrae Zyril Belmonte
-- Maligro, Jenny Mae Ramos
-- Pomoy, Nyfe Rafael
-
----
-
-## Tech Stack
-
-| Layer      | Technology                        |
-|------------|-----------------------------------|
-| Backend    | Node.js + Express.js              |
-| Database   | MySQL via XAMPP                   |
-| Templating | EJS (HTML with dynamic data)      |
-| Styling    | CSS                               |
-| Auth       | express-session + bcryptjs        |
-
----
 
 ## Prerequisites
 
@@ -65,7 +42,7 @@ Run the installer with all default settings.
 
 > ⚠️ Unlike SQLite, MySQL does NOT create itself automatically when you clone this repo.  
 > Every team member must follow ALL of these steps on their own machine.
-
+> > iMportant ni guys kay Dili sya pareha atong SQLite nato sa una where mo generate ra dayon ug table structure if ma clone na ang repo. Kailangan kita pa, each, manually ang mo setup sa table structure ug database, where mo add manually ta sa myphp to view it, ang atong basehan ug butangan ug queries kay ang file na database.sql PLEASE IF MAG EDIT OR DROP sa file ingna ang team para dili ma guba ang structure
 ---
 
 ### Step 1 — Clone the repository
@@ -93,7 +70,7 @@ This reads `package.json` and installs everything the project needs. It creates 
 
 ### Step 3 — Create your `.env` file
 
-> iMportant ni guys kay Dili sya pareha atong SQLite nato sa una where mo generate ra dayon ug table structure if ma clone na ang repo. Kailangan kita pa, each, manually ang mo setup sa table structure ug database, where mo add manually ta sa myphp to view it, ang atong basehan ug butangan ug queries kay ang file na database.sql PLEASE IF MAG EDIT OR DROP sa file ingna ang team para dili ma guba ang structure
+
 
 The `.env` file holds your personal database settings. It is **never committed to GitHub** because each person's setup is slightly different.
 
