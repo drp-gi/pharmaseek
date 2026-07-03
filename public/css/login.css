@@ -1,0 +1,322 @@
+/* ============================================================
+   login.css — PharmaSeek Login Page
+   ============================================================ */
+
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f0f4f8;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* subtle prescription paper texture feel */
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(59,130,246,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59,130,246,0.06) 0%, transparent 50%);
+}
+
+/* ── Page wrapper ─────────────────────────────────────────── */
+.page-wrapper {
+  width: 100%;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.card {
+  display: flex;
+  width: 100%;
+  max-width: 900px;
+  min-height: 520px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Left Panel ───────────────────────────────────────────── */
+.card__left {
+  position: relative;
+  flex: 0 0 42%;
+  background: linear-gradient(145deg, #1d6ed8 0%, #1a56c4 40%, #1447a0 100%);
+  padding: 48px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  color: #fff;
+}
+
+/* dot grid decorations */
+.dots {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(8, 6px);
+  gap: 6px;
+  opacity: 0.25;
+}
+.dots::before,
+.dots--top::before,
+.dots--bottom::before {
+  content: '';
+}
+.dots--top  { top: 20px;  left: 20px; }
+.dots--bottom { bottom: 20px; right: 20px; }
+
+/* generate dot grid via box-shadow trick */
+.dots--top::after,
+.dots--bottom::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    12px 0 #fff, 24px 0 #fff, 36px 0 #fff, 48px 0 #fff, 60px 0 #fff, 72px 0 #fff,
+    0 12px #fff, 12px 12px #fff, 24px 12px #fff, 36px 12px #fff, 48px 12px #fff, 60px 12px #fff, 72px 12px #fff,
+    0 24px #fff, 12px 24px #fff, 24px 24px #fff, 36px 24px #fff, 48px 24px #fff, 60px 24px #fff, 72px 24px #fff,
+    0 36px #fff, 12px 36px #fff, 24px 36px #fff, 36px 36px #fff, 48px 36px #fff, 60px 36px #fff, 72px 36px #fff;
+}
+
+/* circle blobs */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+.blob--1 {
+  width: 260px;
+  height: 260px;
+  bottom: -80px;
+  right: -80px;
+}
+.blob--2 {
+  width: 160px;
+  height: 160px;
+  bottom: 60px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.blob--3 {
+  width: 100px;
+  height: 100px;
+  top: 80px;
+  right: -30px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Brand */
+.brand {
+  position: relative;
+  z-index: 1;
+}
+.brand__name {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  margin-bottom: 10px;
+}
+.brand__tagline {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.80);
+  line-height: 1.6;
+}
+
+/* Feature badges */
+.features {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+.feature i {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ── Right Panel ──────────────────────────────────────────── */
+.card__right {
+  flex: 1;
+  background: #fff;
+  padding: 52px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Form header */
+.form-header {
+  margin-bottom: 28px;
+}
+.form-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+.form-header p {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Error alert */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+}
+.alert--error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.alert i {
+  flex-shrink: 0;
+}
+
+/* Form fields */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: #111827;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.field input::placeholder {
+  color: #9ca3af;
+}
+.field input:focus {
+  border-color: #1d6ed8;
+  box-shadow: 0 0 0 3px rgba(29, 110, 216, 0.12);
+}
+
+/* Password field with toggle */
+.password-wrapper {
+  position: relative;
+}
+.password-wrapper input {
+  padding-right: 44px;
+}
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 1rem;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+.toggle-password:hover {
+  color: #1d6ed8;
+}
+
+/* Sign in button */
+.btn-signin {
+  width: 100%;
+  padding: 13px;
+  background: #fff;
+  color: #111827;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  margin-top: 4px;
+}
+.btn-signin:hover {
+  background: #1d6ed8;
+  color: #fff;
+  border-color: #1d6ed8;
+  box-shadow: 0 4px 14px rgba(29, 110, 216, 0.35);
+}
+.btn-signin:active {
+  background: #1447a0;
+  border-color: #1447a0;
+  box-shadow: none;
+}
+
+/* Footer note */
+.footer-note {
+  margin-top: 32px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .card {
+    flex-direction: column;
+    border-radius: 16px;
+  }
+  .card__left {
+    flex: none;
+    padding: 32px 28px;
+  }
+  .card__right {
+    padding: 36px 28px;
+  }
+  .brand__name {
+    font-size: 1.6rem;
+  }
+}

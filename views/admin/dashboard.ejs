@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PharmaSeek — Admin</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 40px; }
+    .banner { background: #1d6ed8; color: #fff; padding: 24px 32px; border-radius: 14px; margin-bottom: 20px; }
+    .banner h1 { margin: 0 0 4px; font-size: 1.4rem; }
+    .banner p  { margin: 0; opacity: 0.85; font-size: 0.9rem; }
+    form { display: inline; }
+    .btn { padding: 10px 20px; background: #fff; color: #1d6ed8; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 16px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <h1>Welcome, <%= user.first_name %> 👋</h1>
+    <p>Role: <%= user.position %> &nbsp;·&nbsp; Admin Dashboard</p>
+    <form action="/logout" method="POST">
+      <button class="btn" type="submit">Sign Out</button>
+    </form>
+  </div>
+  <p>Admin dashboard — pages coming soon.</p>
+</body>
+</html>
