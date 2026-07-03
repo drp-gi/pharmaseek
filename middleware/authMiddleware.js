@@ -1,0 +1,1 @@
+//blocks unauthenticated access, yiii
