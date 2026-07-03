@@ -1,0 +1,1 @@
+//restricts by Admin/Pharmacist/Staff mao daw mo check kinsay ni log in
