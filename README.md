@@ -1,30 +1,7 @@
 # PharmaSeek — Pharmacy Inventory System
 
 A web-based pharmacy inventory management system built with Node.js, Express, and MySQL.  
-Developed as a requirement for **Information Management II** at the University of San Carlos, DCISM.
 
----
-
-## Team Members
-
-- Alegado, Aya Mumiah Nardo
-- Delino, Andrae Zyril Belmonte
-- Maligro, Jenny Mae Ramos
-- Pomoy, Nyfe Rafael
-
----
-
-## Tech Stack
-
-| Layer      | Technology                        |
-|------------|-----------------------------------|
-| Backend    | Node.js + Express.js              |
-| Database   | MySQL via XAMPP                   |
-| Templating | EJS (HTML with dynamic data)      |
-| Styling    | CSS                               |
-| Auth       | express-session + bcryptjs        |
-
----
 
 ## Prerequisites
 
