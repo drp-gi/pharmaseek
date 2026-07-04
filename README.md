@@ -50,7 +50,7 @@ Run the installer with all default settings.
 Open a terminal, navigate to where you want the project folder, then run:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pharmaseek.git
+git clone [https://github.com/YOUR_USERNAME/pharmaseek.git](https://github.com/drp-gi/pharmaseek.git)
 cd pharmaseek
 ```
 
