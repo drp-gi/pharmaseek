@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Reports</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/users.css">
+  <link rel="stylesheet" href="/css/reports.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/sidebar', { active: 'reports' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Reports</h1>
+          <p>Filter and review inventory activity by date range</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <%
+        function tabHref(t) {
+          return '/admin/reports?tab=' + t
+            + '&from=' + encodeURIComponent(from)
+            + '&to=' + encodeURIComponent(to)
+            + '&type=' + encodeURIComponent(type);
+        }
+        const returnTo = tabHref(tab);
+      %>
+
+      <!-- ── REPORT PANEL ────────────────────────────── -->
+      <section class="panel">
+        <div class="report-tabs">
+          <a href="<%= tabHref('stock') %>" class="report-tab <%= tab === 'stock' ? 'active' : '' %>">Stock Movement</a>
+          <a href="<%= tabHref('expiration') %>" class="report-tab <%= tab === 'expiration' ? 'active' : '' %>">Expiration Tracking</a>
+          <a href="<%= tabHref('restock') %>" class="report-tab <%= tab === 'restock' ? 'active' : '' %>">Restock Request Status</a>
+        </div>
+
+        <form action="/admin/reports" method="GET" class="filter-row">
+          <input type="hidden" name="tab" value="<%= tab %>">
+          <div class="filter-field">
+            <label for="from">From</label>
+            <input type="date" id="from" name="from" value="<%= from %>">
+          </div>
+          <div class="filter-field">
+            <label for="to">To</label>
+            <input type="date" id="to" name="to" value="<%= to %>">
+          </div>
+          <% if (tab === 'stock') { %>
+            <div class="filter-field">
+              <label for="type">Type</label>
+              <select id="type" name="type">
+                <option value="All" <%= type === 'All' ? 'selected' : '' %>>All Types</option>
+                <option value="restock" <%= type === 'restock' ? 'selected' : '' %>>Restock</option>
+                <option value="sale" <%= type === 'sale' ? 'selected' : '' %>>Sale</option>
+                <option value="disposal" <%= type === 'disposal' ? 'selected' : '' %>>Disposal</option>
+              </select>
+            </div>
+          <% } %>
+          <div class="filter-row__spacer"></div>
+          <button type="submit" class="btn-primary">
+            <i data-lucide="file-chart-column" class="ic"></i> Generate Report
+          </button>
+        </form>
+
+        <div class="table-wrap">
+          <% if (tab === 'stock') { %>
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Medicine</th>
+                  <th>Type</th>
+                  <th>Quantity</th>
+                  <th>Staff</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (rows.length === 0) { %>
+                  <tr class="empty-row"><td colspan="5">No stock movement records in this range.</td></tr>
+                <% } else { %>
+                  <% rows.forEach(function(r) { %>
+                    <% const isRestock = r.transaction_type === 'restock'; %>
+                    <% const colorIndex = (r.first_name.charCodeAt(0) + r.last_name.charCodeAt(0)) % 5; %>
+                    <tr>
+                      <td><%= new Date(r.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                      <td class="medicine-name"><%= r.medicine_name %></td>
+                      <td><span class="badge badge--<%= r.transaction_type %>"><%= r.transaction_type.charAt(0).toUpperCase() + r.transaction_type.slice(1) %></span></td>
+                      <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>"><%= isRestock ? '+' : '-' %><%= r.transaction_quantity %> units</td>
+                      <td>
+                        <div class="tx-user">
+                          <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %><%= r.last_name[0] %></div>
+                          <%= r.first_name %> <%= r.last_name[0] %>.
+                        </div>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+            <p class="report-summary">Showing <%= rows.length %> of <%= totalCount %> stock movement records</p>
+
+          <% } else if (tab === 'expiration') { %>
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Stock Qty</th>
+                  <th>Expiration Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (rows.length === 0) { %>
+                  <tr class="empty-row"><td colspan="4">No medicines with an expiration date in this range.</td></tr>
+                <% } else { %>
+                  <% const todayMs = Date.now(); %>
+                  <% rows.forEach(function(r) { %>
+                    <% const expMs = new Date(r.expiration_date).getTime(); %>
+                    <% const daysLeft = Math.ceil((expMs - todayMs) / 86400000); %>
+                    <% let statusClass = 'good', statusLabel = 'Good'; %>
+                    <% if (daysLeft < 0) { statusClass = 'expired'; statusLabel = 'Expired'; }
+                       else if (daysLeft <= 30) { statusClass = 'expiring'; statusLabel = 'Expiring Soon'; } %>
+                    <tr>
+                      <td class="medicine-name"><%= r.medicine_name %></td>
+                      <td><%= r.stock_quantity %></td>
+                      <td><%= new Date(r.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                      <td><span class="badge badge--<%= statusClass %>"><%= statusLabel %></span></td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+            <p class="report-summary">Showing <%= rows.length %> of <%= totalCount %> medicines nearing expiration</p>
+
+          <% } else { %>
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Medicine</th>
+                  <th>Quantity Requested</th>
+                  <th>Status</th>
+                  <th>Requested By</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (rows.length === 0) { %>
+                  <tr class="empty-row"><td colspan="5">No restock requests in this range.</td></tr>
+                <% } else { %>
+                  <% rows.forEach(function(r) { %>
+                    <% const colorIndex = r.first_name ? (r.first_name.charCodeAt(0) + r.last_name.charCodeAt(0)) % 5 : 0; %>
+                    <tr>
+                      <td><%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                      <td class="medicine-name"><%= r.medicine_name %></td>
+                      <td><%= r.quantity_requested %> units</td>
+                      <td><span class="badge badge--<%= r.status.toLowerCase() %>"><%= r.status %></span></td>
+                      <td>
+                        <% if (r.first_name) { %>
+                          <div class="tx-user">
+                            <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %><%= r.last_name[0] %></div>
+                            <%= r.first_name %> <%= r.last_name[0] %>.
+                          </div>
+                        <% } else { %>
+                          —
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+            <p class="report-summary">Showing <%= rows.length %> of <%= totalCount %> restock requests</p>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- ── MANAGEMENT LOG ───────────────────────────── -->
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Management Log</h2>
+        </div>
+
+        <% if (logged) { %>
+          <div class="alert alert--success">
+            <i data-lucide="circle-check" class="ic"></i>
+            Log entry saved.
+          </div>
+        <% } %>
+        <% if (logError) { %>
+          <div class="alert alert--error">
+            <i data-lucide="circle-alert" class="ic"></i>
+            Please fill in both Findings and Corrective Action.
+          </div>
+        <% } %>
+
+        <form action="/admin/reports/logs" method="POST" class="log-form">
+          <input type="hidden" name="return_to" value="<%= returnTo %>">
+
+          <div class="field">
+            <label for="findings">Findings</label>
+            <textarea id="findings" name="findings" placeholder="Enter audit findings after report review..."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="corrective_action">Corrective Action</label>
+            <textarea id="corrective_action" name="corrective_action" placeholder="Enter actions to be taken..."></textarea>
+          </div>
+
+          <div class="log-form__footer">
+            <div class="field">
+              <label for="medicine_id">Link to Medicine (Optional)</label>
+              <select id="medicine_id" name="medicine_id">
+                <option value="">Select a medicine to link this entry</option>
+                <% medicines.forEach(function(m) { %>
+                  <option value="<%= m.medicine_id %>"><%= m.medicine_name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary">Submit Log</button>
+          </div>
+        </form>
+      </section>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -116,9 +116,9 @@ CREATE TABLE management_logs (
 
 INSERT INTO users (first_name, last_name, username, password, email, position, status)
 VALUES
-('Admin', 'User', 'admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@pharmaseek.com', 'Admin', 'Active'),
-('Rica', 'Cruz', 'rcruz_ph', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'rcruz@pharmaseek.com', 'Pharmacist', 'Active'),
-('Marco', 'Reyes', 'mreyes_s', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'mreyes@pharmaseek.com', 'Staff', 'Active');
+('Admin', 'User', 'admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin.user@pharmaseek.com', 'Admin', 'Active'),
+('Rica', 'Cruz', 'rcruz_ph', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'rica.cruz@pharmaseek.com', 'Pharmacist', 'Active'),
+('Marco', 'Reyes', 'mreyes_s', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'marco.reyes@pharmaseek.com', 'Staff', 'Active');
 
 
 INSERT INTO categories (category_name, description)
@@ -132,8 +132,51 @@ VALUES
 
 INSERT INTO suppliers (company_name, contact_person, phone_number, email)
 VALUES
-('MediCore Philippines', 'Juan Dela Cruz', '0920-111-2222', 'orders@medicore.ph');
+('MediCore Philippines', 'Juan Dela Cruz', '0920-111-2222', 'orders@medicore.ph'),
+('Unilab Distribution Inc.', 'Maria Santos', '+63 2 8858 1000', 'orders@unilab.com.ph');
 
 
---mao ni databse na file guys mix nani sa inyo gi send na database
---ang katong select select na columns kay magamit to ighumman sa UI ig connect sa database
+-- MEDICINES
+-- Mixed on purpose: some below their stock_threshold (shows red/low-stock
+-- in the UI), some past expiration_date, some expiring within 30 days,
+-- so both the Inventory catalog and the Reports > Expiration Tracking
+-- tab have real data to render against.
+
+INSERT INTO medicines (medicine_name, brand_name, medicine_type, dose, description, unit_price, stock_quantity, stock_threshold, expiration_date, image_path, category_id, supplier_id)
+VALUES
+('Paracetamol 500mg', 'Biogesic', 'Tablet', '500mg',
+ 'For the relief of minor aches and pains such as headache, muscle ache, backache, minor arthritis pain, common cold, toothache, and menstrual cramps.',
+ 4.50, 1240, 100, '2025-12-12', '/uploads/medicines/paracetamol500.webp',
+ (SELECT category_id FROM categories WHERE category_name = 'Analgesics'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Unilab Distribution Inc.')),
+
+('Ibuprofen 400mg', 'Advil', 'Tablet', '400mg',
+ 'Nonsteroidal anti-inflammatory drug (NSAID) used to reduce fever and treat pain or inflammation.',
+ 12.00, 850, 100, '2027-03-20', '/uploads/medicines/ibuprofen400.webp',
+ (SELECT category_id FROM categories WHERE category_name = 'Analgesics'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines')),
+
+('Amoxicillin 500mg', 'Amoxil', 'Capsule', '500mg',
+ 'Penicillin-type antibiotic used to treat a wide variety of bacterial infections.',
+ 25.00, 42, 50, '2027-01-10', '/uploads/medicines/amoxicillin500.avif',
+ (SELECT category_id FROM categories WHERE category_name = 'Antibiotics'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Unilab Distribution Inc.')),
+
+('Ascorbic Acid 500mg', 'Cecon', 'Tablet', '500mg',
+ 'Vitamin C supplement that supports immune function and antioxidant activity.',
+ 8.75, 2100, 200, '2028-05-01', '/uploads/medicines/ascorbic500mg.png',
+ (SELECT category_id FROM categories WHERE category_name = 'Vitamins'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines')),
+
+('Oseltamivir 75mg', 'Tamiflu', 'Capsule', '75mg',
+ 'Antiviral medicine used to treat and prevent influenza (flu).',
+ 85.00, 15, 30, '2026-08-01', '/uploads/medicines/Oseltamivir75mg.jpg',
+ (SELECT category_id FROM categories WHERE category_name = 'Antivirals'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Unilab Distribution Inc.')),
+
+('Omeprazole 20mg', 'Losec', 'Capsule', '20mg',
+ 'Proton pump inhibitor used to treat heartburn, acid reflux, and stomach ulcers.',
+ 15.00, 300, 50, '2027-11-11', '/uploads/medicines/Omeprazole20mg.webp',
+ (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines'));
+

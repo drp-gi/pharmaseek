@@ -1,0 +1,108 @@
+/* ============================================================
+   reports.css — PharmaSeek Reports & Management Log
+   (extends dashboard.css + users.css)
+   ============================================================ */
+
+/* ── Underline-style report tabs ─────────────────────────── */
+.report-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid #e5e9f0;
+  margin-bottom: 20px;
+}
+.report-tab {
+  padding: 4px 2px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.report-tab:hover { color: #111827; }
+.report-tab.active {
+  color: #1d6ed8;
+  border-bottom-color: #1d6ed8;
+}
+
+/* ── Filter row ───────────────────────────────────────────── */
+.filter-row {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.filter-field label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+.filter-field input,
+.filter-field select {
+  padding: 9px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filter-field input:focus,
+.filter-field select:focus {
+  border-color: #1d6ed8;
+  box-shadow: 0 0 0 3px rgba(29, 110, 216, 0.12);
+}
+.filter-row .btn-primary {
+  flex-shrink: 0;
+}
+.filter-row__spacer { flex: 1; }
+
+/* ── Report summary line ─────────────────────────────────── */
+.report-summary {
+  font-size: 0.82rem;
+  color: #6b7280;
+  padding-top: 14px;
+}
+
+/* ── Management Log form ─────────────────────────────────── */
+.log-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.log-form__footer {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+}
+.log-form__footer .field { flex: 1; }
+.log-form__footer .btn-primary {
+  flex-shrink: 0;
+}
+
+.alert--success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .filter-row { flex-direction: column; align-items: stretch; }
+  .filter-row .btn-primary { width: 100%; justify-content: center; }
+  .log-form__footer { flex-direction: column; align-items: stretch; }
+  .log-form__footer .btn-primary { width: 100%; justify-content: center; }
+}

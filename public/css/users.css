@@ -1,0 +1,367 @@
+/* ============================================================
+   users.css — PharmaSeek User Management (extends dashboard.css)
+   ============================================================ */
+
+/* ── Toolbar: tabs + search ───────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.tabs {
+  display: inline-flex;
+  background: #eef1f5;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 2px;
+}
+.tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tab:hover { color: #111827; }
+.tab.active {
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search--wide input { width: 280px; }
+
+/* ── Simple total-users stat (replaces the old 3-card row) ─── */
+.simple-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.simple-stat__value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #111827;
+}
+.simple-stat__label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* ── Panel eyebrow label ──────────────────────────────────── */
+.panel__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+/* ── Avatars (single initial, Google-account style) ──────── */
+.avatar-lg {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+.full-name { font-weight: 700; color: #111827; }
+
+/* ── Role / status badges ─────────────────────────────────── */
+.badge-role--admin      { background: #e5e7eb; color: #374151; }
+.badge-role--pharmacist { background: #dbeafe; color: #1d4ed8; }
+.badge-role--staff      { background: #f1f5f9; color: #475569; }
+.badge-status--active   { background: #dcfce7; color: #15803d; }
+.badge-status--inactive { background: #f1f5f9; color: #6b7280; }
+
+/* ── Row actions ──────────────────────────────────────────── */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Edit button — clearly clickable: filled square, border on hover. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #f3f4f6;
+  border: 1.5px solid transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.icon-btn:hover { background: #eef2f7; border-color: #d1d5db; color: #374151; }
+.icon-btn .ic { width: 14px; height: 14px; }
+
+/* Active/Inactive toggle — a quiet secondary control, not an
+   alarming button: small switch, navy when on, gray when off. */
+.row-toggle {
+  width: 34px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.row-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+.row-toggle:hover { background: #b7bfca; }
+.row-toggle--on { background: #1d6ed8; }
+.row-toggle--on:hover { background: #1a5fc0; }
+.row-toggle--on::after { transform: translateX(14px); }
+
+/* Admin rows: same shape, visually muted and inert. */
+.row-toggle--disabled,
+.row-toggle--disabled:hover,
+.row-toggle--disabled.row-toggle--on,
+.row-toggle--disabled.row-toggle--on:hover {
+  background: #eceef1;
+  cursor: not-allowed;
+}
+.row-toggle--disabled::after { background: #f9fafb; }
+
+/* Hover/focus tooltip for disabled controls.
+   Uses ::before (not ::after) because .row-toggle::after is already
+   the switch knob — reusing ::after here fought with it on hover. */
+[data-tooltip] { position: relative; }
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111827;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* ── Pagination ───────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+.pagination__summary {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+.pagination__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.page-btn:hover:not(:disabled) { border-color: #1d6ed8; color: #1d6ed8; }
+.page-btn--active { background: #16294d; border-color: #16294d; color: #fff; }
+.page-btn--active:hover { color: #fff; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn--nav .ic { width: 14px; height: 14px; }
+
+/* ── Add User modal ───────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+.modal-overlay.is-open { display: flex; }
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-bottom: 1px solid #eef1f5;
+}
+.modal__header h3 { font-size: 1.2rem; font-weight: 800; color: #111827; }
+.modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 7px;
+  transition: background 0.15s, color 0.15s;
+}
+.modal__close:hover { background: #f1f5f9; color: #374151; }
+.modal__close .ic { width: 18px; height: 18px; }
+
+.modal__form {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-row--end { align-items: end; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+.field input,
+.field select,
+.field textarea {
+  padding: 11px 13px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: #1d6ed8;
+  box-shadow: 0 0 0 3px rgba(29, 110, 216, 0.12);
+}
+.field select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.field--switch { justify-content: flex-end; }
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+.switch__toggle {
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d1d5db;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.switch__toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+.switch__toggle--on { background: #1d6ed8; }
+.switch__toggle--on::after { transform: translateX(18px); }
+
+/* Locked when Role = Admin, since Admin accounts stay Active */
+.switch__toggle--locked {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.switch__toggle--locked.switch__toggle--on { background: #93b4dd; }
+
+.switch__label { font-size: 0.88rem; font-weight: 600; color: #374151; }
+
+.modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .form-row { grid-template-columns: 1fr; }
+  .search--wide input { width: 100%; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+}

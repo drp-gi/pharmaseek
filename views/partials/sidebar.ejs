@@ -1,0 +1,37 @@
+<aside class="sidebar">
+  <div class="sidebar__logo">
+    <div class="sidebar__logo-icon"><i data-lucide="pill" class="ic"></i></div>
+    <span class="sidebar__logo-text">PharmaSeek</span>
+  </div>
+
+  <nav class="sidebar__nav">
+    <a href="/admin/dashboard" class="sidebar__link <%= active === 'dashboard' ? 'active' : '' %>">
+      <i data-lucide="layout-grid" class="ic"></i> Dashboard
+    </a>
+    <a href="/admin/users" class="sidebar__link <%= active === 'users' ? 'active' : '' %>">
+      <i data-lucide="users" class="ic"></i> User Management
+    </a>
+    <a href="/admin/reports" class="sidebar__link <%= active === 'reports' ? 'active' : '' %>">
+      <i data-lucide="bar-chart-3" class="ic"></i> Reports
+    </a>
+    <a href="#" class="sidebar__link <%= active === 'logs' ? 'active' : '' %>">
+      <i data-lucide="list-checks" class="ic"></i> Management Logs
+    </a>
+    <a href="#" class="sidebar__link <%= active === 'settings' ? 'active' : '' %>">
+      <i data-lucide="settings" class="ic"></i> Settings
+    </a>
+  </nav>
+
+  <div class="sidebar__profile">
+    <div class="sidebar__avatar"><%= user.first_name[0] %><%= user.last_name[0] %></div>
+    <div class="sidebar__profile-info">
+      <div class="sidebar__profile-name">Dr. <%= user.first_name %> <%= user.last_name %></div>
+      <div class="sidebar__profile-role"><%= user.position %></div>
+    </div>
+    <form action="/logout" method="POST">
+      <button class="sidebar__logout" type="submit" title="Sign out">
+        <i data-lucide="log-out" class="ic"></i>
+      </button>
+    </form>
+  </div>
+</aside>

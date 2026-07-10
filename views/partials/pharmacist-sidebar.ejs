@@ -1,0 +1,37 @@
+<aside class="sidebar">
+  <div class="sidebar__logo">
+    <div class="sidebar__logo-icon"><i data-lucide="pill" class="ic"></i></div>
+    <span class="sidebar__logo-text">PharmaSeek</span>
+  </div>
+
+  <nav class="sidebar__nav">
+    <a href="/pharmacist/dashboard" class="sidebar__link <%= active === 'dashboard' ? 'active' : '' %>">
+      <i data-lucide="layout-grid" class="ic"></i> Dashboard
+    </a>
+    <a href="/pharmacist/inventory" class="sidebar__link <%= active === 'inventory' ? 'active' : '' %>">
+      <i data-lucide="package" class="ic"></i> Inventory
+    </a>
+    <a href="#" class="sidebar__link <%= active === 'restock' ? 'active' : '' %>">
+      <i data-lucide="arrow-left-right" class="ic"></i> Restock Requests
+    </a>
+    <a href="#" class="sidebar__link <%= active === 'alerts' ? 'active' : '' %>">
+      <i data-lucide="bell" class="ic"></i> Alerts
+    </a>
+    <a href="#" class="sidebar__link <%= active === 'settings' ? 'active' : '' %>">
+      <i data-lucide="settings" class="ic"></i> Settings
+    </a>
+  </nav>
+
+  <div class="sidebar__profile">
+    <div class="sidebar__avatar"><%= user.first_name[0] %></div>
+    <div class="sidebar__profile-info">
+      <div class="sidebar__profile-name">Pharmacist <%= user.first_name %></div>
+      <div class="sidebar__profile-role"><%= user.email %></div>
+    </div>
+    <form action="/logout" method="POST">
+      <button class="sidebar__logout" type="submit" title="Sign out">
+        <i data-lucide="log-out" class="ic"></i>
+      </button>
+    </form>
+  </div>
+</aside>

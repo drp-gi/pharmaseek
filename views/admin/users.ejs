@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — User Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/users.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/sidebar', { active: 'users' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>User Management</h1>
+          <p>Manage staff accounts and access</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+          <button class="btn-primary" id="openAddUser" type="button">
+            <i data-lucide="user-plus" class="ic"></i> Add User
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- ── TOTAL USERS ─────────────────────────────── -->
+      <div class="simple-stat">
+        <span class="simple-stat__value"><%= stats.totalUsers %></span>
+        <span class="simple-stat__label">Total Users</span>
+      </div>
+
+      <!-- ── TABS + SEARCH ───────────────────────────── -->
+      <div class="toolbar">
+        <div class="tabs">
+          <button type="button" class="tab active" data-role="All">All</button>
+          <button type="button" class="tab" data-role="Admin">Admin</button>
+          <button type="button" class="tab" data-role="Pharmacist">Pharmacist</button>
+          <button type="button" class="tab" data-role="Staff">Staff</button>
+        </div>
+        <div class="search search--wide">
+          <i data-lucide="search" class="ic"></i>
+          <input type="text" id="userSearch" placeholder="Search by name or username...">
+        </div>
+      </div>
+
+      <!-- ── USERS TABLE ─────────────────────────────── -->
+      <section class="panel">
+        <div class="panel__header">
+          <h2 class="panel__eyebrow">All Users</h2>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (users.length === 0) { %>
+                <tr class="empty-row">
+                  <td colspan="6">No users found.</td>
+                </tr>
+              <% } else { %>
+                <% const adminCount = users.filter(function(x) { return x.position === 'Admin'; }).length; %>
+                <% users.forEach(function(u) { %>
+                  <% const colorIndex = u.first_name.charCodeAt(0) % 5; %>
+                  <% const isSelf = u.user_id === user.user_id; %>
+                  <% const isLastAdmin = u.position === 'Admin' && adminCount === 1; %>
+                  <% const roleLocked = isSelf || isLastAdmin; %>
+                  <% const lockReason = isSelf
+                       ? 'You cannot change your own role.'
+                       : (isLastAdmin ? 'At least one Admin account must remain.' : ''); %>
+                  <tr class="user-row"
+                      data-role="<%= u.position %>"
+                      data-name="<%= (u.first_name + ' ' + u.last_name + ' ' + u.username).toLowerCase() %>">
+                    <td>
+                      <div class="tx-user">
+                        <div class="avatar-lg avatar--<%= colorIndex %>"><%= u.first_name[0].toUpperCase() %></div>
+                        <span class="full-name"><%= u.first_name %> <%= u.last_name %></span>
+                      </div>
+                    </td>
+                    <td><%= u.username %></td>
+                    <td><span class="badge badge-role--<%= u.position.toLowerCase() %>"><%= u.position.toUpperCase() %></span></td>
+                    <td><%= u.email || '—' %></td>
+                    <td><span class="badge badge-status--<%= u.status.toLowerCase() %>"><%= u.status.toUpperCase() %></span></td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="icon-btn edit-user-btn" type="button" title="Edit user"
+                                data-id="<%= u.user_id %>"
+                                data-first-name="<%= u.first_name %>"
+                                data-last-name="<%= u.last_name %>"
+                                data-username="<%= u.username %>"
+                                data-email="<%= u.email || '' %>"
+                                data-position="<%= u.position %>"
+                                data-status="<%= u.status %>"
+                                data-role-locked="<%= roleLocked %>"
+                                data-lock-reason="<%= lockReason %>">
+                          <i data-lucide="pencil" class="ic"></i>
+                        </button>
+                        <% if (u.position === 'Admin') { %>
+                          <span class="row-toggle row-toggle--disabled <%= u.status === 'Active' ? 'row-toggle--on' : '' %>"
+                                role="switch"
+                                aria-checked="<%= u.status === 'Active' %>"
+                                aria-disabled="true"
+                                tabindex="0"
+                                data-tooltip="Cannot deactivate Admin account"></span>
+                        <% } else { %>
+                          <form action="/admin/users/<%= u.user_id %>/toggle-status" method="POST">
+                            <button type="submit"
+                                    class="row-toggle <%= u.status === 'Active' ? 'row-toggle--on' : '' %>"
+                                    role="switch"
+                                    aria-checked="<%= u.status === 'Active' %>"
+                                    aria-label="<%= u.status === 'Active' ? 'Deactivate' : 'Activate' %> <%= u.first_name %> <%= u.last_name %>"></button>
+                          </form>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+      </section>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
+  </div>
+
+  <!-- ── ADD USER MODAL ────────────────────────────── -->
+  <div class="modal-overlay" id="addUserOverlay" data-reopen="<%= errorSource === 'add' ? 'true' : 'false' %>">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>Add New User</h3>
+        <button class="modal__close" id="closeAddUser" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <form action="/admin/users" method="POST" class="modal__form">
+        <div class="form-row">
+          <div class="field">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" required>
+          </div>
+          <div class="field">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required>
+        </div>
+
+        <div class="field">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email">
+        </div>
+
+        <div class="field">
+          <label for="temp_password">Password</label>
+          <input type="password" id="temp_password" name="temp_password" required minlength="6">
+        </div>
+
+        <div class="form-row form-row--end">
+          <div class="field">
+            <label for="position">Role</label>
+            <select id="position" name="position" required>
+              <option value="Admin">Admin</option>
+              <option value="Pharmacist">Pharmacist</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+          <div class="field field--switch">
+            <label>Status</label>
+            <div class="switch">
+              <input type="hidden" name="status" id="statusInput" value="Active">
+              <button type="button" class="switch__toggle switch__toggle--on" id="switchToggle"></button>
+              <span class="switch__label" id="switchLabel">Active</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelAddUser">Cancel</button>
+          <button type="submit" class="btn-primary">Save User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── EDIT USER MODAL ───────────────────────────── -->
+  <div class="modal-overlay" id="editUserOverlay" data-reopen="<%= errorSource === 'edit' ? 'true' : 'false' %>">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>Edit User</h3>
+        <button class="modal__close" id="closeEditUser" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <form action="/admin/users/0" method="POST" class="modal__form" id="editUserForm">
+        <div class="form-row">
+          <div class="field">
+            <label for="edit_first_name">First Name</label>
+            <input type="text" id="edit_first_name" name="first_name" required>
+          </div>
+          <div class="field">
+            <label for="edit_last_name">Last Name</label>
+            <input type="text" id="edit_last_name" name="last_name" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="edit_username">Username</label>
+          <input type="text" id="edit_username" name="username" required>
+        </div>
+
+        <div class="field">
+          <label for="edit_email">Email Address</label>
+          <input type="email" id="edit_email" name="email">
+        </div>
+
+        <div class="form-row form-row--end">
+          <div class="field" id="editRoleField">
+            <label for="edit_position">Role</label>
+            <select id="edit_position" name="position" required>
+              <option value="Admin">Admin</option>
+              <option value="Pharmacist">Pharmacist</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+          <div class="field field--switch">
+            <label>Status</label>
+            <div class="switch">
+              <input type="hidden" name="status" id="editStatusInput" value="Active">
+              <button type="button" class="switch__toggle switch__toggle--on" id="editSwitchToggle"></button>
+              <span class="switch__label" id="editSwitchLabel">Active</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelEditUser">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="/js/users.js"></script>
+</body>
+</html>

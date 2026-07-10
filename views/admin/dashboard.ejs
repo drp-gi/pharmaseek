@@ -2,24 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PharmaSeek — Admin</title>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 40px; }
-    .banner { background: #1d6ed8; color: #fff; padding: 24px 32px; border-radius: 14px; margin-bottom: 20px; }
-    .banner h1 { margin: 0 0 4px; font-size: 1.4rem; }
-    .banner p  { margin: 0; opacity: 0.85; font-size: 0.9rem; }
-    form { display: inline; }
-    .btn { padding: 10px 20px; background: #fff; color: #1d6ed8; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 16px; display: block; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
-  <div class="banner">
-    <h1>Welcome, <%= user.first_name %> To edit this section kay adto sa folder-> views->admin->dashboard.ejs, same rana ejs sa html</h1>
-    <p>Role: <%= user.position %> &nbsp;·&nbsp; Admin Dashboard</p>
-    <form action="/logout" method="POST">
-      <button class="btn" type="submit">Sign Out</button>
-    </form>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/sidebar', { active: 'dashboard' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Overview of system activity and inventory health</p>
+        </div>
+        <div class="topbar__actions">
+          <div class="search">
+            <i data-lucide="search" class="ic"></i>
+            <input type="text" placeholder="Search data...">
+          </div>
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- ── STAT CARDS ─────────────────────────────── -->
+      <section class="stats">
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--blue"><i data-lucide="users" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Active Users</div>
+            <div class="stat-card__value"><%= stats.activeUsers %></div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--warn">
+          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="alert-triangle" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Pending Restock Requests</div>
+            <div class="stat-card__value"><%= stats.pendingRestocks %></div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--green"><i data-lucide="circle-dollar-sign" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Sales Revenue (This Month)</div>
+            <div class="stat-card__value">₱<%= Number(stats.revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── RECENT TRANSACTIONS ────────────────────── -->
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Recent Transactions</h2>
+          <div class="panel__actions">
+            <button class="btn-outline"><i data-lucide="filter" class="ic"></i> Filter</button>
+            <button class="btn-outline"><i data-lucide="download" class="ic"></i> Export</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Medicine Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Recorded By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (transactions.length === 0) { %>
+                <tr class="empty-row">
+                  <td colspan="5">No transactions recorded yet.</td>
+                </tr>
+              <% } else { %>
+                <% transactions.forEach(function(tx, i) { %>
+                  <% const isRestock = tx.transaction_type === 'restock'; %>
+                  <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                  <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
+                  <tr>
+                    <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) %></td>
+                    <td class="medicine-name"><%= tx.medicine_name %></td>
+                    <td>
+                      <span class="badge badge--<%= tx.transaction_type %>"><%= tx.transaction_type.toUpperCase() %></span>
+                    </td>
+                    <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>">
+                      <%= isRestock ? '+' : '-' %><%= tx.transaction_quantity %> Units
+                    </td>
+                    <td>
+                      <div class="tx-user">
+                        <div class="avatar avatar--<%= colorIndex %>"><%= initials %></div>
+                        <%= tx.first_name %> <%= tx.last_name %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <a href="#"><button class="btn-primary btn-primary--below-table">View Full Reports <i data-lucide="arrow-right" class="ic"></i></button></a>
+      </section>
+
+      <!-- ── STOCK TRENDS + QUICK LINKS ─────────────── -->
+      <section class="bottom-grid">
+        <div class="panel">
+          <div class="panel__header">
+            <h2>Stock Level Trends</h2>
+          </div>
+          <div class="chart-placeholder">
+            <i data-lucide="trending-up" class="ic"></i>
+            <span>Inventory activity visualization</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <h2>Quick Links</h2>
+          </div>
+          <div class="quick-links">
+            <a href="#" class="quick-link">Add New Medicine <i data-lucide="circle-plus" class="ic trailing"></i></a>
+            <a href="#" class="quick-link">Print Prescription Labels <i data-lucide="printer" class="ic trailing"></i></a>
+            <a href="#" class="quick-link">Audit Inventory <i data-lucide="clipboard-list" class="ic trailing"></i></a>
+          </div>
+        </div>
+      </section>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
   </div>
-  <p>Admin dashboard — pages coming soon.</p>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

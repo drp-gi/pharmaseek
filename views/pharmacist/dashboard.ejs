@@ -2,24 +2,138 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PharmaSeek — Pharmacist</title>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 40px; }
-    .banner { background: #0e9f6e; color: #fff; padding: 24px 32px; border-radius: 14px; margin-bottom: 20px; }
-    .banner h1 { margin: 0 0 4px; font-size: 1.4rem; }
-    .banner p  { margin: 0; opacity: 0.85; font-size: 0.9rem; }
-    form { display: inline; }
-    .btn { padding: 10px 20px; background: #fff; color: #0e9f6e; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 16px; display: block; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Pharmacist Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/inventory.css">
 </head>
 <body>
-  <div class="banner">
-    <h1>Welcome, <%= user.first_name %> kung mo edit this section adto sa folder   -> views -> pharmacist -> dashboard.ejs same ranang .ejs sa html</h1>
-    <p>Role: <%= user.position %> &nbsp;·&nbsp; Pharmacist Dashboard</p>
-    <form action="/logout" method="POST">
-      <button class="btn" type="submit">Sign Out</button>
-    </form>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/pharmacist-sidebar', { active: 'dashboard' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Overview of inventory and restock activity</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- ── STAT CARDS ─────────────────────────────── -->
+      <section class="stats stats--4">
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--blue"><i data-lucide="package" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Total Medicines</div>
+            <div class="stat-card__value"><%= stats.totalMedicines %></div>
+          </div>
+        </div>
+
+        <div class="stat-card <%= stats.lowStock > 0 ? 'stat-card--warn' : '' %>">
+          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="triangle-alert" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Low Stock Items</div>
+            <div class="stat-card__value"><%= stats.lowStock %></div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="calendar-clock" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Expiring Soon</div>
+            <div class="stat-card__value"><%= stats.expiringSoon %></div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--green"><i data-lucide="arrow-left-right" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Pending Restocks</div>
+            <div class="stat-card__value"><%= stats.pendingRestocks %></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── LOW STOCK + QUICK LINKS ─────────────────── -->
+      <section class="bottom-grid">
+        <div class="panel">
+          <div class="panel__header">
+            <h2>Low Stock Alerts</h2>
+          </div>
+
+          <div class="table-wrap">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Category</th>
+                  <th>Current Stock</th>
+                  <th>Threshold</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (lowStockItems.length === 0) { %>
+                  <tr class="empty-row"><td colspan="4">No medicines are below their stock threshold.</td></tr>
+                <% } else { %>
+                  <% lowStockItems.forEach(function(m) { %>
+                    <tr>
+                      <td class="medicine-name"><%= m.medicine_name %></td>
+                      <td><%= m.category_name || '—' %></td>
+                      <td class="text-low-stock"><%= Number(m.stock_quantity).toLocaleString() %> units</td>
+                      <td><%= Number(m.stock_threshold).toLocaleString() %> units</td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+
+          <a href="/pharmacist/inventory"><button class="btn-primary btn-primary--below-table">View Full Inventory <i data-lucide="arrow-right" class="ic"></i></button></a>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <h2>Quick Links</h2>
+          </div>
+          <div class="quick-links">
+            <a href="/pharmacist/inventory" class="quick-link">View Inventory <i data-lucide="package" class="ic trailing"></i></a>
+            <a href="#" class="quick-link">Restock Requests <i data-lucide="arrow-left-right" class="ic trailing"></i></a>
+            <a href="#" class="quick-link">Alerts <i data-lucide="bell" class="ic trailing"></i></a>
+          </div>
+        </div>
+      </section>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
   </div>
-  <p>Pharmacist dashboard — pages coming soon.</p>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

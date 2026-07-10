@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Medicine Catalog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/users.css">
+  <link rel="stylesheet" href="/css/inventory.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/pharmacist-sidebar', { active: 'inventory' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Medicine Catalog</h1>
+          <p>Manage your pharmacy's medicine records</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+          <button class="btn-primary" id="openAddMedicine" type="button">
+            <i data-lucide="package" class="ic"></i> Add Medicine
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- ── SEARCH + CATEGORY FILTER ────────────────── -->
+      <div class="catalog-toolbar">
+        <div class="search">
+          <i data-lucide="search" class="ic"></i>
+          <input type="text" id="medicineSearch" placeholder="Search by medicine name...">
+        </div>
+        <select id="categoryFilter">
+          <option value="All">All Categories</option>
+          <% categories.forEach(function(c) { %>
+            <option value="<%= c.category_id %>"><%= c.category_name %></option>
+          <% }); %>
+        </select>
+      </div>
+
+      <!-- ── CATALOG ──────────────────────────────────── -->
+      <% if (groups.length === 0) { %>
+        <p class="empty-catalog">No medicines in the catalog yet. Click "Add Medicine" to get started.</p>
+      <% } else { %>
+        <% groups.forEach(function(group) { %>
+          <div class="category-group" data-category-group>
+            <div class="category-group__header">
+              <h2><%= group.name %></h2>
+              <span class="count-badge"><%= group.items.length %></span>
+            </div>
+            <div class="medicine-grid">
+              <% group.items.forEach(function(m) { %>
+                <% const isLow = m.stock_quantity < m.stock_threshold; %>
+                <button type="button" class="medicine-card medicine-item"
+                        data-category-id="<%= m.category_id || '' %>"
+                        data-name="<%= m.medicine_name.toLowerCase() %>"
+                        data-id="<%= m.medicine_id %>"
+                        data-medicine-name="<%= m.medicine_name %>"
+                        data-brand-name="<%= m.brand_name || '' %>"
+                        data-medicine-type="<%= m.medicine_type || '' %>"
+                        data-dose="<%= m.dose || '' %>"
+                        data-description="<%= m.description || '' %>"
+                        data-unit-price="<%= m.unit_price %>"
+                        data-stock-quantity="<%= m.stock_quantity %>"
+                        data-stock-threshold="<%= m.stock_threshold %>"
+                        data-expiration-date="<%= m.expiration_date ? new Date(m.expiration_date).toISOString().slice(0,10) : '' %>"
+                        data-category-name="<%= m.category_name || '' %>"
+                        data-supplier-id="<%= m.supplier_id || '' %>"
+                        data-supplier-name="<%= m.supplier_name || '' %>"
+                        data-supplier-phone="<%= m.supplier_phone || '' %>"
+                        data-image-path="<%= m.image_path || '' %>">
+                  <div class="medicine-card__image">
+                    <% if (m.image_path) { %>
+                      <img src="<%= m.image_path %>" alt="<%= m.medicine_name %>">
+                    <% } else { %>
+                      <i data-lucide="image" class="ic"></i>
+                    <% } %>
+                  </div>
+                  <div class="medicine-card__body">
+                    <div class="medicine-card__name"><%= m.medicine_name %></div>
+                    <div class="medicine-card__brand"><%= m.brand_name || ' ' %></div>
+                    <div class="medicine-card__footer">
+                      <div>
+                        <div class="medicine-card__stock-label">Stock</div>
+                        <div class="medicine-card__stock-value <%= isLow ? 'text-low-stock' : '' %>">
+                          <%= Number(m.stock_quantity).toLocaleString() %> units
+                        </div>
+                      </div>
+                      <div class="medicine-card__price">₱<%= Number(m.unit_price).toFixed(2) %></div>
+                    </div>
+                  </div>
+                </button>
+              <% }); %>
+            </div>
+          </div>
+        <% }); %>
+      <% } %>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
+  </div>
+
+  <!-- ── MEDICINE DETAIL MODAL ─────────────────────── -->
+  <div class="modal-overlay detail-modal" id="detailOverlay">
+    <div class="modal">
+      <div class="detail-image">
+        <i data-lucide="image" class="ic" id="detailImageIcon"></i>
+        <img id="detailImage" alt="" hidden>
+        <button class="modal__close" id="closeDetail" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+      <div class="detail-body">
+        <div class="detail-name" id="detailName"></div>
+        <div class="detail-brand" id="detailBrand"></div>
+        <div class="detail-meta" id="detailMeta"></div>
+        <p class="detail-desc" id="detailDescription"></p>
+
+        <div class="detail-stats">
+          <div class="detail-stats__item">
+            <div class="detail-stats__label">Unit Price</div>
+            <div class="detail-stats__value" id="detailPrice"></div>
+          </div>
+          <div class="detail-stats__item">
+            <div class="detail-stats__label">Current Stock</div>
+            <div class="detail-stats__value" id="detailStock"></div>
+          </div>
+          <div class="detail-stats__item">
+            <div class="detail-stats__label">Stock Threshold</div>
+            <div class="detail-stats__value" id="detailThreshold"></div>
+          </div>
+          <div class="detail-stats__item">
+            <div class="detail-stats__label">Expiration Date</div>
+            <div class="detail-stats__value" id="detailExpiration"></div>
+          </div>
+        </div>
+
+        <div class="detail-category">
+          <span class="badge badge--category" id="detailCategory"></span>
+        </div>
+
+        <div class="detail-supplier" id="detailSupplierBlock">
+          <div class="detail-supplier__label">Supplier</div>
+          <div class="detail-supplier__name" id="detailSupplierName"></div>
+          <div class="detail-supplier__phone" id="detailSupplierPhone"></div>
+        </div>
+
+        <div class="detail-actions">
+          <button type="button" class="btn-primary" id="detailEditBtn">
+            <i data-lucide="pencil" class="ic"></i> Edit
+          </button>
+          <form id="deleteForm" action="/pharmacist/inventory/0/delete" method="POST" style="flex:1;">
+            <button type="submit" class="btn-danger-outline" id="detailDeleteBtn">
+              <i data-lucide="trash-2" class="ic"></i> Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ADD / EDIT MEDICINE MODAL ─────────────────── -->
+  <div class="modal-overlay" id="medicineFormOverlay">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 id="medicineFormTitle">Add New Medicine</h3>
+        <button class="modal__close" id="closeMedicineForm" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <form action="/pharmacist/inventory" method="POST" class="modal__form" id="medicineForm" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="field">
+            <label for="medicine_name">Medicine Name</label>
+            <input type="text" id="medicine_name" name="medicine_name" placeholder="e.g. Paracetamol" required>
+          </div>
+          <div class="field">
+            <label for="brand_name">Brand Name</label>
+            <input type="text" id="brand_name" name="brand_name" placeholder="e.g. Biogesic">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="medicine_type">Medicine Type</label>
+            <input type="text" id="medicine_type" name="medicine_type" placeholder="e.g. Tablet, Capsule, Syrup">
+          </div>
+          <div class="field">
+            <label for="dose">Dose</label>
+            <input type="text" id="dose" name="dose" placeholder="e.g. 500mg">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" placeholder="Brief details about the medicine..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="unit_price">Unit Price (₱)</label>
+            <input type="number" id="unit_price" name="unit_price" placeholder="0.00" step="0.01" min="0" required>
+          </div>
+          <div class="field">
+            <label for="stock_quantity">Stock Quantity</label>
+            <input type="number" id="stock_quantity" name="stock_quantity" placeholder="0" min="0" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="stock_threshold">Stock Threshold</label>
+          <input type="number" id="stock_threshold" name="stock_threshold" placeholder="0" min="0" required>
+          <p class="field__hint">Alert triggers when stock falls to or below this number</p>
+        </div>
+
+        <div class="field">
+          <label for="expiration_date">Expiration Date</label>
+          <input type="date" id="expiration_date" name="expiration_date">
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="category_id">Category</label>
+            <select id="category_id" name="category_id">
+              <option value="">Select a category</option>
+              <% categories.forEach(function(c) { %>
+                <option value="<%= c.category_id %>"><%= c.category_name %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="supplier_id">Supplier (Optional)</label>
+            <select id="supplier_id" name="supplier_id">
+              <option value="">Select a supplier</option>
+              <% suppliers.forEach(function(s) { %>
+                <option value="<%= s.supplier_id %>"><%= s.company_name %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Medicine Image</label>
+          <div class="upload-row">
+            <div class="upload-preview" id="uploadPreview">
+              <i data-lucide="image" class="ic" id="uploadPreviewIcon"></i>
+              <img id="uploadPreviewImg" alt="" hidden>
+            </div>
+            <label class="upload-dropzone" for="image_file" id="uploadDropzone">
+              <span id="uploadDropzoneText">Click to upload or drag and drop</span>
+              <input type="file" id="image_file" name="image" accept="image/png, image/jpeg, image/webp, image/avif" hidden>
+            </label>
+          </div>
+          <input type="hidden" name="existing_image_path" id="existing_image_path" value="">
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelMedicineForm">Cancel</button>
+          <button type="submit" class="btn-primary" id="medicineFormSubmit">Save Medicine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="/js/inventory.js"></script>
+</body>
+</html>
