@@ -5,6 +5,7 @@ const bcrypt          = require('bcryptjs');
 const isAuthenticated = require('../middleware/authMiddleware');
 const authorizeRole   = require('../middleware/roleMiddleware');
 const db              = require('../db/connection');
+const { manilaTodayISO, daysBetween } = require('../utils/manilaTime');
 
 // All admin routes require login + Admin role
 router.use(isAuthenticated);
@@ -199,18 +200,19 @@ router.post('/users/:id/toggle-status', async (req, res) => {
 const REPORT_TABS = ['stock', 'expiration', 'restock'];
 const REPORT_LIMIT = 50;
 
-function isoDate(date) {
-  return date.toISOString().slice(0, 10);
+// 'YYYY-MM-DD' for a number of days before/after today in Manila.
+function manilaDateOffsetISO(days) {
+  const base = new Date(manilaTodayISO() + 'T00:00:00Z');
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
 }
 
 // GET /admin/reports
 router.get('/reports', async (req, res) => {
   const tab = REPORT_TABS.includes(req.query.tab) ? req.query.tab : 'stock';
 
-  const defaultFrom = new Date();
-  defaultFrom.setDate(defaultFrom.getDate() - 30);
-  const from = req.query.from || isoDate(defaultFrom);
-  const to   = req.query.to   || isoDate(new Date());
+  const from = req.query.from || manilaDateOffsetISO(-30);
+  const to   = req.query.to   || manilaTodayISO();
   const type = ['restock', 'sale', 'disposal'].includes(req.query.type) ? req.query.type : 'All';
 
   try {
@@ -258,6 +260,22 @@ router.get('/reports', async (req, res) => {
          LIMIT ${REPORT_LIMIT}`,
         [from, to]
       );
+
+      const todayISO = manilaTodayISO();
+      rows.forEach((r) => {
+        const daysLeft = daysBetween(todayISO, r.expiration_date);
+        r.daysLeft = daysLeft;
+        if (daysLeft < 0) {
+          r.statusClass = 'expired';
+          r.statusLabel = 'Expired';
+        } else if (daysLeft <= 30) {
+          r.statusClass = 'expiring';
+          r.statusLabel = 'Expiring Soon';
+        } else {
+          r.statusClass = 'good';
+          r.statusLabel = 'Good';
+        }
+      });
 
     } else {
       const [[{ count }]] = await db.query(

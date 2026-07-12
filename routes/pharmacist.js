@@ -6,6 +6,7 @@ const path              = require('path');
 const isAuthenticated  = require('../middleware/authMiddleware');
 const authorizeRole    = require('../middleware/roleMiddleware');
 const db               = require('../db/connection');
+const { confirmDelivery } = require('../utils/confirmDelivery');
 
 // All pharmacist routes require login + Pharmacist role
 router.use(isAuthenticated);
@@ -68,14 +69,36 @@ router.get('/dashboard', async (req, res) => {
        FROM medicines m
        LEFT JOIN categories c ON m.category_id = c.category_id
        WHERE m.stock_quantity < m.stock_threshold
-       ORDER BY (m.stock_threshold - m.stock_quantity) DESC
+       ORDER BY m.stock_quantity ASC, (m.stock_threshold - m.stock_quantity) DESC
        LIMIT 8`
+    );
+
+    const [nearExpiryItems] = await db.query(
+      `SELECT m.medicine_id, m.medicine_name, m.expiration_date, c.category_name,
+              DATEDIFF(m.expiration_date, CURDATE()) AS daysLeft
+       FROM medicines m
+       LEFT JOIN categories c ON m.category_id = c.category_id
+       WHERE m.expiration_date IS NOT NULL
+         AND m.expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+       ORDER BY m.expiration_date ASC
+       LIMIT 8`
+    );
+
+    const [pendingRestockItems] = await db.query(
+      `SELECT rr.request_id, rr.quantity_requested, rr.request_date, m.medicine_name
+       FROM restock_requests rr
+       JOIN medicines m ON rr.medicine_id = m.medicine_id
+       WHERE rr.status = 'Pending'
+       ORDER BY rr.request_date ASC
+       LIMIT 10`
     );
 
     res.render('pharmacist/dashboard', {
       user: req.session.user,
       stats: { totalMedicines, lowStock, expiringSoon, pendingRestocks },
       lowStockItems,
+      nearExpiryItems,
+      pendingRestockItems,
       error: null
     });
   } catch (err) {
@@ -84,9 +107,150 @@ router.get('/dashboard', async (req, res) => {
       user: req.session.user,
       stats: { totalMedicines: 0, lowStock: 0, expiringSoon: 0, pendingRestocks: 0 },
       lowStockItems: [],
+      nearExpiryItems: [],
+      pendingRestockItems: [],
       error: 'Could not load dashboard data. Please try again.'
     });
   }
+});
+
+// Redirects back to wherever the action was triggered from (Dashboard or
+// the Restock Requests page), falling back if return_to is missing/unsafe.
+function safeRedirect(req, res, fallback) {
+  const returnTo = req.body.return_to;
+  const isSafe = returnTo
+    && (returnTo.startsWith('/pharmacist/dashboard') || returnTo.startsWith('/pharmacist/restock-requests'));
+  res.redirect(isSafe ? returnTo : fallback);
+}
+
+// ── Shared loader for the Restock Requests page ─────────────────
+async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
+  const validTabs = ['Pending', 'Approved', 'Completed', 'Cancelled'];
+  const activeTab = validTabs.includes(tab) ? tab : 'Pending';
+
+  const [requests] = await db.query(
+    `SELECT rr.request_id, rr.quantity_requested, rr.request_date, rr.notes,
+            m.medicine_name, c.category_name, st.transaction_quantity AS quantity_received
+     FROM restock_requests rr
+     JOIN medicines m ON rr.medicine_id = m.medicine_id
+     LEFT JOIN categories c ON m.category_id = c.category_id
+     LEFT JOIN stock_transactions st ON st.request_id = rr.request_id AND st.transaction_type = 'restock'
+     WHERE rr.status = ?
+     ORDER BY rr.request_date DESC`,
+    [activeTab]
+  );
+
+  const [medicines] = await db.query(
+    `SELECT medicine_id, medicine_name, stock_quantity, stock_threshold FROM medicines ORDER BY medicine_name`
+  );
+
+  res.render('pharmacist/restock-requests', {
+    user: sessionUser,
+    tab: activeTab,
+    requests,
+    medicines,
+    error
+  });
+}
+
+// GET /pharmacist/restock-requests
+router.get('/restock-requests', async (req, res) => {
+  try {
+    await loadRestockRequestsPage(res, req.session.user, req.query.tab);
+  } catch (err) {
+    console.error('Restock requests load error:', err);
+    res.render('pharmacist/restock-requests', {
+      user: req.session.user,
+      tab: 'Pending',
+      requests: [],
+      medicines: [],
+      error: 'Could not load restock requests. Please try again.'
+    });
+  }
+});
+
+// POST /pharmacist/restock-requests — create a new request
+router.post('/restock-requests', async (req, res) => {
+  const { medicine_id, quantity_requested, notes } = req.body;
+
+  if (!medicine_id || !quantity_requested) {
+    return loadRestockRequestsPage(res, req.session.user, 'Pending', 'Please select a medicine and enter a quantity.');
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO restock_requests (status, quantity_requested, notes, medicine_id, user_id)
+       VALUES ('Pending', ?, ?, ?, ?)`,
+      [quantity_requested, notes || null, medicine_id, req.session.user.user_id]
+    );
+    res.redirect('/pharmacist/restock-requests?tab=Pending');
+  } catch (err) {
+    console.error('Create restock request error:', err);
+    await loadRestockRequestsPage(res, req.session.user, 'Pending', 'Could not create the restock request. Please try again.');
+  }
+});
+
+// POST /pharmacist/restock-requests/:id/approve
+// The Pending tab's Requested Qty column is an editable input tied to
+// this form via the `form` attribute — whatever value is in it at
+// submit time (system suggestion or a Pharmacist edit) overwrites
+// quantity_requested. Forms without that field (e.g. the Dashboard's
+// Approve button) just update status, leaving quantity untouched.
+router.post('/restock-requests/:id/approve', async (req, res) => {
+  const qty = Number(req.body.quantity_requested);
+  try {
+    if (qty > 0) {
+      await db.query(
+        `UPDATE restock_requests SET status = 'Approved', quantity_requested = ?
+         WHERE request_id = ? AND status = 'Pending'`,
+        [qty, req.params.id]
+      );
+    } else {
+      await db.query(
+        `UPDATE restock_requests SET status = 'Approved' WHERE request_id = ? AND status = 'Pending'`,
+        [req.params.id]
+      );
+    }
+  } catch (err) {
+    console.error('Approve restock request error:', err);
+  }
+  safeRedirect(req, res, '/pharmacist/dashboard');
+});
+
+// POST /pharmacist/restock-requests/:id/dismiss
+router.post('/restock-requests/:id/dismiss', async (req, res) => {
+  try {
+    await db.query(
+      `UPDATE restock_requests SET status = 'Cancelled' WHERE request_id = ? AND status = 'Pending'`,
+      [req.params.id]
+    );
+  } catch (err) {
+    console.error('Dismiss restock request error:', err);
+  }
+  safeRedirect(req, res, '/pharmacist/dashboard');
+});
+
+// POST /pharmacist/restock-requests/:id/confirm-delivery
+// Same verification step and stock-moving logic as the Staff Transactions
+// page's Delivery Check-in — requires the actually-received quantity
+// before the request is completed and stock is updated.
+router.post('/restock-requests/:id/confirm-delivery', async (req, res) => {
+  const qty = Number(req.body.quantity_received);
+
+  if (qty > 0) {
+    try {
+      await confirmDelivery(db, {
+        requestId: req.params.id,
+        quantityReceived: qty,
+        notes: req.body.notes,
+        userId: req.session.user.user_id
+      });
+    } catch (err) {
+      console.error('Confirm delivery error:', err);
+    }
+  }
+
+  safeRedirect(req, res, '/pharmacist/dashboard');
 });
 
 // ── Shared loader for the Inventory page ────────────────────────

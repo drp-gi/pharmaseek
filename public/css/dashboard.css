@@ -304,6 +304,11 @@ hr.divider {
   border-left: 4px solid #f59e0b;
   box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15);
 }
+.stat-card--danger {
+  border-color: #fca5a5;
+  border-left: 4px solid #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12);
+}
 .stat-card__icon {
   width: 46px;
   height: 46px;
@@ -320,6 +325,7 @@ hr.divider {
 .stat-card__icon--blue   { background: #eaf2ff; color: #1d6ed8; }
 .stat-card__icon--amber  { background: #fef3c7; color: #d97706; }
 .stat-card__icon--green  { background: #dcfce7; color: #16a34a; }
+.stat-card__icon--red    { background: #fee2e2; color: #dc2626; }
 
 .stat-card__label {
   font-size: 0.82rem;
@@ -413,6 +419,33 @@ table.tx-table {
 .tx-table td.qty-pos { color: #16a34a; font-weight: 700; }
 .tx-table td.qty-neg { color: #dc2626; font-weight: 700; }
 
+/* Editable "Requested Qty" cell — Pending tab of Restock Requests */
+.qty-input {
+  width: 90px;
+  padding: 6px 10px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.qty-input:focus {
+  border-color: #1d6ed8;
+  box-shadow: 0 0 0 3px rgba(29, 110, 216, 0.12);
+}
+
+/* Small info icon + tooltip next to a table header */
+.th-hint {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: #9ca3af;
+  cursor: help;
+}
+.th-hint .ic { width: 13px; height: 13px; }
+
 .badge {
   display: inline-block;
   padding: 4px 10px;
@@ -433,6 +466,81 @@ table.tx-table {
 .badge--expired   { background: #fee2e2; color: #b91c1c; }
 .badge--expiring  { background: #fef3c7; color: #b45309; }
 .badge--good      { background: #dcfce7; color: #15803d; }
+
+/* Out of Stock is deliberately louder than Low Stock — solid fill vs
+   a light tint — since it's the more urgent of the two. */
+.badge--out-of-stock { background: #dc2626; color: #fff; }
+.badge--low-stock    { background: #fee2e2; color: #b91c1c; }
+
+/* Approve / Dismiss — same fixed-width pill pattern as the row
+   Activate/Deactivate toggle, so the two buttons never cause layout
+   shift against each other. */
+.request-actions { display: flex; gap: 8px; }
+.btn-approve,
+.btn-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100px;
+  padding: 7px 0;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+}
+.btn-approve:hover,
+.btn-dismiss:hover { transform: translateY(-1px); }
+.btn-approve .ic,
+.btn-dismiss .ic { width: 13px; height: 13px; }
+.btn-approve {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+.btn-approve:hover { background: #bbf7d0; box-shadow: 0 3px 10px rgba(21, 128, 61, 0.2); }
+.btn-dismiss {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.btn-dismiss:hover { background: #fecaca; box-shadow: 0 3px 10px rgba(185, 28, 28, 0.2); }
+
+/* "Confirm Delivery" trigger — used on both the Staff Transactions page
+   (Delivery Check-in tab) and the Pharmacist's Restock Requests page
+   (Approved tab), so it lives here rather than a page-specific stylesheet. */
+.btn-checkin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 160px;
+  padding: 7px 0;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1.5px solid #bfdbfe;
+  background: #dbeafe;
+  color: #1d4ed8;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+}
+.btn-checkin:hover {
+  background: #bfdbfe;
+  box-shadow: 0 3px 10px rgba(29, 78, 216, 0.2);
+  transform: translateY(-1px);
+}
+.btn-checkin .ic { width: 13px; height: 13px; }
+
+.waiting-label {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: #9ca3af;
+}
 
 .tx-user {
   display: flex;
@@ -547,6 +655,67 @@ table.tx-table {
   font-size: 0.75rem;
   padding: 24px 0 8px;
 }
+
+/* ── Staff dashboard: quick actions, notice banner, info line ── */
+.staff-actions {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.staff-actions .btn-outline {
+  padding: 12px 20px;
+  font-size: 0.85rem;
+}
+
+.notice-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.notice-banner__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d6ed8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.notice-banner__icon .ic { width: 17px; height: 17px; }
+.notice-banner__text {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e3a5f;
+}
+.notice-banner__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1d6ed8;
+  white-space: nowrap;
+}
+.notice-banner__link:hover { text-decoration: underline; }
+.notice-banner__link .ic { width: 14px; height: 14px; }
+
+.info-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #6b7280;
+  padding-top: 18px;
+}
+.info-line .ic { width: 15px; height: 15px; color: #9ca3af; flex-shrink: 0; }
 
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 1080px) {

@@ -108,7 +108,7 @@
                     <% const isRestock = r.transaction_type === 'restock'; %>
                     <% const colorIndex = (r.first_name.charCodeAt(0) + r.last_name.charCodeAt(0)) % 5; %>
                     <tr>
-                      <td><%= new Date(r.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                      <td><%= new Date(r.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
                       <td class="medicine-name"><%= r.medicine_name %></td>
                       <td><span class="badge badge--<%= r.transaction_type %>"><%= r.transaction_type.charAt(0).toUpperCase() + r.transaction_type.slice(1) %></span></td>
                       <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>"><%= isRestock ? '+' : '-' %><%= r.transaction_quantity %> units</td>
@@ -139,18 +139,12 @@
                 <% if (rows.length === 0) { %>
                   <tr class="empty-row"><td colspan="4">No medicines with an expiration date in this range.</td></tr>
                 <% } else { %>
-                  <% const todayMs = Date.now(); %>
                   <% rows.forEach(function(r) { %>
-                    <% const expMs = new Date(r.expiration_date).getTime(); %>
-                    <% const daysLeft = Math.ceil((expMs - todayMs) / 86400000); %>
-                    <% let statusClass = 'good', statusLabel = 'Good'; %>
-                    <% if (daysLeft < 0) { statusClass = 'expired'; statusLabel = 'Expired'; }
-                       else if (daysLeft <= 30) { statusClass = 'expiring'; statusLabel = 'Expiring Soon'; } %>
                     <tr>
                       <td class="medicine-name"><%= r.medicine_name %></td>
                       <td><%= r.stock_quantity %></td>
-                      <td><%= new Date(r.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
-                      <td><span class="badge badge--<%= statusClass %>"><%= statusLabel %></span></td>
+                      <td><%= new Date(r.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
+                      <td><span class="badge badge--<%= r.statusClass %>"><%= r.statusLabel %></span></td>
                     </tr>
                   <% }); %>
                 <% } %>
@@ -176,7 +170,7 @@
                   <% rows.forEach(function(r) { %>
                     <% const colorIndex = r.first_name ? (r.first_name.charCodeAt(0) + r.last_name.charCodeAt(0)) % 5 : 0; %>
                     <tr>
-                      <td><%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                      <td><%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
                       <td class="medicine-name"><%= r.medicine_name %></td>
                       <td><%= r.quantity_requested %> units</td>
                       <td><span class="badge badge--<%= r.status.toLowerCase() %>"><%= r.status %></span></td>

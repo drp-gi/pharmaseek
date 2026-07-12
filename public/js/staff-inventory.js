@@ -25,26 +25,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchBox) searchBox.addEventListener('input', applyFilters);
   if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
 
-  // ── Modal open/close helpers ─────────────────────────────
+  // ── Detail modal open/close ──────────────────────────────
   const detailOverlay = document.getElementById('detailOverlay');
-  const formOverlay    = document.getElementById('medicineFormOverlay');
-
   const openDetail  = () => detailOverlay.classList.add('is-open');
   const closeDetail = () => detailOverlay.classList.remove('is-open');
-  const openForm     = () => formOverlay.classList.add('is-open');
-  const closeForm    = () => formOverlay.classList.remove('is-open');
 
   document.getElementById('closeDetail').addEventListener('click', closeDetail);
   detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) closeDetail(); });
-
-  document.getElementById('closeMedicineForm').addEventListener('click', closeForm);
-  document.getElementById('cancelMedicineForm').addEventListener('click', closeForm);
-  formOverlay.addEventListener('click', (e) => { if (e.target === formOverlay) closeForm(); });
-
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    closeDetail();
-    closeForm();
+    if (e.key === 'Escape') closeDetail();
   });
 
   // ── Detail modal population ──────────────────────────────
@@ -58,11 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
   };
 
-  let activeMedicineId = null;
-
   function openDetailFor(card) {
     const d = card.dataset;
-    activeMedicineId = d.id;
 
     document.getElementById('detailName').textContent = d.medicineName;
     document.getElementById('detailBrand').textContent = d.brandName || '';
@@ -84,6 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('detailThreshold').textContent = Number(d.stockThreshold).toLocaleString();
     document.getElementById('detailExpiration').textContent = formatDate(d.expirationDate);
 
+    const statusBadge = document.getElementById('detailStatusBadge');
+    if (d.statusClass) {
+      statusBadge.textContent = d.statusLabel;
+      statusBadge.className = 'badge badge--' + d.statusClass;
+      statusBadge.hidden = false;
+    } else {
+      statusBadge.hidden = true;
+    }
+
     const categoryEl = document.getElementById('detailCategory');
     categoryEl.textContent = d.categoryName || 'Uncategorized';
 
@@ -95,8 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       supplierBlock.style.display = 'none';
     }
-
-    document.getElementById('deleteForm').action = '/pharmacist/inventory/' + d.id + '/delete';
 
     const detailImage = document.getElementById('detailImage');
     const detailImageIcon = document.getElementById('detailImageIcon');
@@ -116,96 +109,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   items.forEach((card) => {
     card.addEventListener('click', () => openDetailFor(card));
-  });
-
-  // ── Delete confirmation ──────────────────────────────────
-  document.getElementById('deleteForm').addEventListener('submit', (e) => {
-    const name = document.getElementById('detailName').textContent;
-    if (!confirm('Delete "' + name + '"? This cannot be undone.')) {
-      e.preventDefault();
-    }
-  });
-
-  // ── Add / Edit Medicine form ─────────────────────────────
-  const medicineForm   = document.getElementById('medicineForm');
-  const formTitle       = document.getElementById('medicineFormTitle');
-  const formSubmitBtn   = document.getElementById('medicineFormSubmit');
-  const imageFileInput  = document.getElementById('image_file');
-  const existingImagePathInput = document.getElementById('existing_image_path');
-  const uploadPreviewImg  = document.getElementById('uploadPreviewImg');
-  const uploadPreviewIcon = document.getElementById('uploadPreviewIcon');
-  const uploadDropzoneText = document.getElementById('uploadDropzoneText');
-
-  function setImagePreview(src) {
-    if (src) {
-      uploadPreviewImg.src = src;
-      uploadPreviewImg.hidden = false;
-      uploadPreviewIcon.style.display = 'none';
-    } else {
-      uploadPreviewImg.hidden = true;
-      uploadPreviewImg.removeAttribute('src');
-      uploadPreviewIcon.style.display = '';
-    }
-  }
-
-  imageFileInput.addEventListener('change', () => {
-    const file = imageFileInput.files[0];
-    if (!file) return;
-    uploadDropzoneText.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result);
-    reader.readAsDataURL(file);
-  });
-
-  function resetFormFields() {
-    medicineForm.reset();
-    existingImagePathInput.value = '';
-    uploadDropzoneText.textContent = 'Click to upload or drag and drop';
-    setImagePreview(null);
-  }
-
-  function openAddForm() {
-    resetFormFields();
-    medicineForm.action = '/pharmacist/inventory';
-    formTitle.textContent = 'Add New Medicine';
-    formSubmitBtn.textContent = 'Save Medicine';
-    openForm();
-  }
-
-  function openEditForm(card) {
-    const d = card.dataset;
-    resetFormFields();
-    medicineForm.action = '/pharmacist/inventory/' + d.id;
-    formTitle.textContent = 'Edit Medicine';
-    formSubmitBtn.textContent = 'Save Changes';
-
-    document.getElementById('medicine_name').value = d.medicineName;
-    document.getElementById('brand_name').value = d.brandName;
-    document.getElementById('medicine_type').value = d.medicineType;
-    document.getElementById('dose').value = d.dose;
-    document.getElementById('description').value = d.description;
-    document.getElementById('unit_price').value = d.unitPrice;
-    document.getElementById('stock_quantity').value = d.stockQuantity;
-    document.getElementById('stock_threshold').value = d.stockThreshold;
-    document.getElementById('expiration_date').value = d.expirationDate;
-    document.getElementById('category_id').value = d.categoryId;
-    document.getElementById('supplier_id').value = d.supplierId;
-
-    if (d.imagePath) {
-      existingImagePathInput.value = d.imagePath;
-      setImagePreview(d.imagePath);
-    }
-
-    openForm();
-  }
-
-  document.getElementById('openAddMedicine').addEventListener('click', openAddForm);
-
-  document.getElementById('detailEditBtn').addEventListener('click', () => {
-    const card = items.find((item) => item.dataset.id === activeMedicineId);
-    if (card) {
-      closeDetail();
-      openEditForm(card);
-    }
   });
 });

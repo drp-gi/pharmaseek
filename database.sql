@@ -170,7 +170,7 @@ VALUES
 
 ('Oseltamivir 75mg', 'Tamiflu', 'Capsule', '75mg',
  'Antiviral medicine used to treat and prevent influenza (flu).',
- 85.00, 15, 30, '2026-08-01', '/uploads/medicines/Oseltamivir75mg.jpg',
+ 85.00, 0, 30, '2026-08-01', '/uploads/medicines/Oseltamivir75mg.jpg',
  (SELECT category_id FROM categories WHERE category_name = 'Antivirals'),
  (SELECT supplier_id FROM suppliers WHERE company_name = 'Unilab Distribution Inc.')),
 
@@ -179,4 +179,45 @@ VALUES
  15.00, 300, 50, '2027-11-11', '/uploads/medicines/Omeprazole20mg.webp',
  (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
  (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines'));
+
+
+-- RESTOCK REQUESTS
+-- Pending requests for the two lowest-stock medicines, flagged by Staff
+-- and awaiting a Pharmacist's Approve/Dismiss on the dashboard.
+
+INSERT INTO restock_requests (status, request_date, quantity_requested, notes, medicine_id, user_id)
+VALUES
+('Pending', '2026-07-09 09:15:00', 100,
+ 'Completely out of stock — flu season demand.',
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Oseltamivir 75mg'),
+ (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+
+('Pending', '2026-07-08 14:40:00', 200,
+ 'Below threshold, still moving fast.',
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Amoxicillin 500mg'),
+ (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+
+('Approved', '2026-07-06 11:00:00', 300,
+ 'Approved by Pharmacist, delivery pending.',
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ibuprofen 400mg'),
+ (SELECT user_id FROM users WHERE username = 'mreyes_s'));
+
+
+-- STOCK TRANSACTIONS
+-- A few same-day sales by Staff, so the Staff dashboard's "recorded X
+-- transactions today" line has real data instead of always reading 0.
+
+INSERT INTO stock_transactions (transaction_type, transaction_quantity, transaction_date, notes, medicine_id, user_id)
+VALUES
+('sale', 12, '2026-07-10 09:20:00', NULL,
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Paracetamol 500mg'),
+ (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+
+('sale', 5, '2026-07-10 10:45:00', NULL,
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ibuprofen 400mg'),
+ (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+
+('sale', 20, '2026-07-10 13:05:00', NULL,
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ascorbic Acid 500mg'),
+ (SELECT user_id FROM users WHERE username = 'mreyes_s'));
 

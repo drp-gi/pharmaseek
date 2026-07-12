@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Restock Requests</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/users.css">
+  <link rel="stylesheet" href="/css/reports.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/pharmacist-sidebar', { active: 'restock' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Restock Requests</h1>
+          <p>Manage and track all restock activity</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="btn-primary" id="openNewRequest" type="button">
+            <i data-lucide="circle-plus" class="ic"></i> New Request
+          </button>
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- ── REQUESTS PANEL ───────────────────────────── -->
+      <section class="panel">
+        <div class="report-tabs">
+          <a href="/pharmacist/restock-requests?tab=Pending" class="report-tab <%= tab === 'Pending' ? 'active' : '' %>">Pending</a>
+          <a href="/pharmacist/restock-requests?tab=Approved" class="report-tab <%= tab === 'Approved' ? 'active' : '' %>">Approved</a>
+          <a href="/pharmacist/restock-requests?tab=Completed" class="report-tab <%= tab === 'Completed' ? 'active' : '' %>">Completed</a>
+          <a href="/pharmacist/restock-requests?tab=Cancelled" class="report-tab <%= tab === 'Cancelled' ? 'active' : '' %>">Cancelled</a>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Medicine</th>
+                <th>Category</th>
+                <th>
+                  Requested Qty
+                  <span class="th-hint" data-tooltip="Suggested by system, editable before approval.">
+                    <i data-lucide="info" class="ic"></i>
+                  </span>
+                </th>
+                <th>Request Date</th>
+                <% if (tab === 'Completed') { %>
+                  <th>Quantity Received</th>
+                <% } %>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (requests.length === 0) { %>
+                <tr class="empty-row"><td colspan="<%= tab === 'Completed' ? 6 : 5 %>">No <%= tab.toLowerCase() %> requests.</td></tr>
+              <% } else { %>
+                <% const returnUrl = '/pharmacist/restock-requests?tab=' + tab; %>
+                <% requests.forEach(function(r) { %>
+                  <tr>
+                    <td class="medicine-name"><%= r.medicine_name %></td>
+                    <td><%= r.category_name || '—' %></td>
+                    <td>
+                      <% if (tab === 'Pending') { %>
+                        <input type="number" class="qty-input" name="quantity_requested"
+                               value="<%= r.quantity_requested %>" min="1"
+                               form="approve-form-<%= r.request_id %>">
+                      <% } else { %>
+                        <%= Number(r.quantity_requested).toLocaleString() %> units
+                      <% } %>
+                    </td>
+                    <td><%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
+                    <% if (tab === 'Completed') { %>
+                      <% const receivedQty = Number(r.quantity_received); %>
+                      <td>
+                        <%= Number.isFinite(receivedQty) ? receivedQty.toLocaleString() + ' units' : '—' %>
+                      </td>
+                    <% } %>
+                    <td>
+                      <% if (tab === 'Pending') { %>
+                        <div class="request-actions">
+                          <form id="approve-form-<%= r.request_id %>" action="/pharmacist/restock-requests/<%= r.request_id %>/approve" method="POST">
+                            <input type="hidden" name="return_to" value="<%= returnUrl %>">
+                            <button type="submit" class="btn-approve"><i data-lucide="check" class="ic"></i> Approve</button>
+                          </form>
+                          <form id="dismiss-form-<%= r.request_id %>" action="/pharmacist/restock-requests/<%= r.request_id %>/dismiss" method="POST">
+                            <input type="hidden" name="return_to" value="<%= returnUrl %>">
+                            <button type="button" class="btn-dismiss"
+                                    data-dismiss-trigger
+                                    data-form-id="dismiss-form-<%= r.request_id %>"
+                                    data-medicine="<%= r.medicine_name %>"
+                                    data-quantity="<%= Number(r.quantity_requested).toLocaleString() %> units"
+                                    data-date="<%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %>">
+                              <i data-lucide="x" class="ic"></i> Dismiss
+                            </button>
+                          </form>
+                        </div>
+                      <% } else if (tab === 'Approved') { %>
+                        <button type="button" class="btn-checkin"
+                                data-confirm-delivery-trigger
+                                data-request-id="<%= r.request_id %>"
+                                data-medicine="<%= r.medicine_name %>"
+                                data-requested-qty="<%= Number(r.quantity_requested).toLocaleString() %> units">
+                          <i data-lucide="package-check" class="ic"></i> Confirm Delivery
+                        </button>
+                      <% } else if (tab === 'Completed') { %>
+                        <span class="badge badge--completed">Completed</span>
+                      <% } else { %>
+                        <span class="badge badge--cancelled">Cancelled</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="report-summary">Showing <%= requests.length %> of <%= requests.length %> requests</p>
+      </section>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
+  </div>
+
+  <!-- ── DISMISS CONFIRMATION MODAL ────────────────── -->
+  <div class="modal-overlay" id="dismissOverlay">
+    <div class="modal modal--sm">
+      <div class="modal__header">
+        <h3>Dismiss this restock request?</h3>
+        <button class="modal__close" id="closeDismissModal" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <div class="confirm-modal__body">
+        <div class="modal-details-box">
+          <div class="modal-detail">
+            <span class="modal-detail__label">Medicine</span>
+            <span class="modal-detail__value" id="dismissMedicine"></span>
+          </div>
+          <div class="modal-detail">
+            <span class="modal-detail__label">Requested Quantity</span>
+            <span class="modal-detail__value" id="dismissQuantity"></span>
+          </div>
+          <div class="modal-detail">
+            <span class="modal-detail__label">Requested Date</span>
+            <span class="modal-detail__value" id="dismissDate"></span>
+          </div>
+        </div>
+
+        <div class="dismiss-warning">
+          <i data-lucide="triangle-alert" class="ic"></i>
+          <span>This medicine will remain flagged if stock stays below its threshold, and a new request may be generated automatically.</span>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelDismiss">Cancel</button>
+          <button type="button" class="btn-danger" id="confirmDismiss">Dismiss Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONFIRM DELIVERY MODAL ────────────────────── -->
+  <div class="modal-overlay" id="confirmDeliveryOverlay">
+    <div class="modal modal--sm">
+      <div class="modal__header">
+        <h3 id="confirmDeliveryTitle">Confirm Delivery</h3>
+        <button class="modal__close" id="closeConfirmDelivery" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <form id="confirmDeliveryForm" action="" method="POST" class="confirm-modal__body">
+        <input type="hidden" name="return_to" id="confirmDeliveryReturnTo" value="">
+
+        <div class="modal-details-box">
+          <div class="modal-detail">
+            <span class="modal-detail__label">Requested Quantity</span>
+            <span class="modal-detail__value" id="confirmDeliveryRequestedQty"></span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="quantity_received">Quantity Actually Received</label>
+          <input type="number" id="quantity_received" name="quantity_received" min="1" placeholder="0" required>
+        </div>
+
+        <div class="field">
+          <label for="delivery_notes">Notes (Optional)</label>
+          <textarea id="delivery_notes" name="notes" placeholder="Any discrepancies or additional details..."></textarea>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelConfirmDelivery">Cancel</button>
+          <button type="submit" class="btn-success">Confirm Delivery</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── NEW REQUEST MODAL ─────────────────────────── -->
+  <div class="modal-overlay" id="newRequestOverlay" data-reopen="<%= error ? 'true' : 'false' %>">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>New Restock Request</h3>
+        <button class="modal__close" id="closeNewRequest" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <form action="/pharmacist/restock-requests" method="POST" class="modal__form">
+        <div class="field">
+          <label for="medicine_id">Medicine</label>
+          <select id="medicine_id" name="medicine_id" required>
+            <option value="">Select a medicine</option>
+            <% medicines.forEach(function(m) { %>
+              <option value="<%= m.medicine_id %>"
+                      data-stock="<%= m.stock_quantity %>"
+                      data-threshold="<%= m.stock_threshold %>"><%= m.medicine_name %></option>
+            <% }); %>
+          </select>
+          <p class="field__hint">Quantity below is a system suggestion — edit it before submitting if needed.</p>
+        </div>
+
+        <div class="field">
+          <label for="quantity_requested">Quantity Requested</label>
+          <input type="number" id="quantity_requested" name="quantity_requested" placeholder="0" min="1" required>
+        </div>
+
+        <div class="field">
+          <label for="notes">Notes (Optional)</label>
+          <textarea id="notes" name="notes" placeholder="Any additional details..."></textarea>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelNewRequest">Cancel</button>
+          <button type="submit" class="btn-primary">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="/js/restock-requests.js"></script>
+</body>
+</html>

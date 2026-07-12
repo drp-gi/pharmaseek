@@ -77,7 +77,7 @@
         </div>
       </section>
 
-      <!-- ── LOW STOCK + QUICK LINKS ─────────────────── -->
+      <!-- ── LOW STOCK + NEAR EXPIRY ──────────────────── -->
       <section class="bottom-grid">
         <div class="panel">
           <div class="panel__header">
@@ -92,18 +92,27 @@
                   <th>Category</th>
                   <th>Current Stock</th>
                   <th>Threshold</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 <% if (lowStockItems.length === 0) { %>
-                  <tr class="empty-row"><td colspan="4">No medicines are below their stock threshold.</td></tr>
+                  <tr class="empty-row"><td colspan="5">No medicines are below their stock threshold.</td></tr>
                 <% } else { %>
                   <% lowStockItems.forEach(function(m) { %>
+                    <% const outOfStock = Number(m.stock_quantity) === 0; %>
                     <tr>
                       <td class="medicine-name"><%= m.medicine_name %></td>
                       <td><%= m.category_name || '—' %></td>
                       <td class="text-low-stock"><%= Number(m.stock_quantity).toLocaleString() %> units</td>
                       <td><%= Number(m.stock_threshold).toLocaleString() %> units</td>
+                      <td>
+                        <% if (outOfStock) { %>
+                          <span class="badge badge--out-of-stock">Out of Stock</span>
+                        <% } else { %>
+                          <span class="badge badge--low-stock">Low Stock</span>
+                        <% } %>
+                      </td>
                     </tr>
                   <% }); %>
                 <% } %>
@@ -116,13 +125,92 @@
 
         <div class="panel">
           <div class="panel__header">
-            <h2>Quick Links</h2>
+            <h2>Near Expiry</h2>
           </div>
-          <div class="quick-links">
-            <a href="/pharmacist/inventory" class="quick-link">View Inventory <i data-lucide="package" class="ic trailing"></i></a>
-            <a href="#" class="quick-link">Restock Requests <i data-lucide="arrow-left-right" class="ic trailing"></i></a>
-            <a href="#" class="quick-link">Alerts <i data-lucide="bell" class="ic trailing"></i></a>
+
+          <div class="table-wrap">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Category</th>
+                  <th>Expiration Date</th>
+                  <th>Days Left</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (nearExpiryItems.length === 0) { %>
+                  <tr class="empty-row"><td colspan="4">No medicines are expiring within 30 days.</td></tr>
+                <% } else { %>
+                  <% nearExpiryItems.forEach(function(m) { %>
+                    <tr>
+                      <td class="medicine-name"><%= m.medicine_name %></td>
+                      <td><%= m.category_name || '—' %></td>
+                      <td><%= new Date(m.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
+                      <td class="<%= m.daysLeft <= 7 ? 'text-low-stock' : '' %>">
+                        <%= m.daysLeft %> day<%= m.daysLeft === 1 ? '' : 's' %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
           </div>
+        </div>
+      </section>
+
+      <!-- ── PENDING RESTOCK REQUESTS ─────────────────── -->
+      <% if (stats.pendingRestocks > 0) { %>
+        <section class="panel">
+          <div class="panel__header">
+            <h2>Pending Restock Requests</h2>
+          </div>
+
+          <div class="table-wrap">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Requested Quantity</th>
+                  <th>Request Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% pendingRestockItems.forEach(function(r) { %>
+                  <tr>
+                    <td class="medicine-name"><%= r.medicine_name %></td>
+                    <td><%= Number(r.quantity_requested).toLocaleString() %> units</td>
+                    <td><%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
+                    <td>
+                      <div class="request-actions">
+                        <form action="/pharmacist/restock-requests/<%= r.request_id %>/approve" method="POST">
+                          <input type="hidden" name="return_to" value="/pharmacist/dashboard">
+                          <button type="submit" class="btn-approve"><i data-lucide="check" class="ic"></i> Approve</button>
+                        </form>
+                        <form action="/pharmacist/restock-requests/<%= r.request_id %>/dismiss" method="POST" onsubmit="return confirm('Dismiss this restock request?');">
+                          <input type="hidden" name="return_to" value="/pharmacist/dashboard">
+                          <button type="submit" class="btn-dismiss"><i data-lucide="x" class="ic"></i> Dismiss</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      <% } %>
+
+      <!-- ── QUICK LINKS ──────────────────────────────── -->
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Quick Links</h2>
+        </div>
+        <div class="quick-links">
+          <a href="/pharmacist/inventory" class="quick-link">View Inventory <i data-lucide="package" class="ic trailing"></i></a>
+          <a href="/pharmacist/restock-requests" class="quick-link">Restock Requests <i data-lucide="arrow-left-right" class="ic trailing"></i></a>
+          <a href="#" class="quick-link">Alerts <i data-lucide="bell" class="ic trailing"></i></a>
         </div>
       </section>
 

@@ -99,6 +99,84 @@
   border: 1px solid #bbf7d0;
 }
 
+/* ── Small confirmation modals (Dismiss, Confirm Delivery) ─── */
+.modal--sm { max-width: 420px; }
+
+.confirm-modal__body {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-details-box {
+  background: #f8fafc;
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  padding: 4px 14px;
+}
+.modal-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #eef1f5;
+}
+.modal-detail:first-child { border-top: none; }
+.modal-detail__label { font-size: 0.82rem; color: #6b7280; font-weight: 600; }
+.modal-detail__value { font-size: 0.88rem; color: #111827; font-weight: 700; text-align: right; }
+
+.dismiss-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.dismiss-warning .ic { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; color: #d97706; }
+
+/* Solid red — a real confirmation, not a subtle secondary action */
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger:hover { background: #b91c1c; }
+
+/* Solid green — the positive/confirming counterpart of .btn-danger */
+.btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-success:hover { background: #15803d; }
+
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 720px) {
   .filter-row { flex-direction: column; align-items: stretch; }

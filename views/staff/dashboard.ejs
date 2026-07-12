@@ -2,24 +2,109 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PharmaSeek — Staff</title>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 40px; }
-    .banner { background: #7c3aed; color: #fff; padding: 24px 32px; border-radius: 14px; margin-bottom: 20px; }
-    .banner h1 { margin: 0 0 4px; font-size: 1.4rem; }
-    .banner p  { margin: 0; opacity: 0.85; font-size: 0.9rem; }
-    form { display: inline; }
-    .btn { padding: 10px 20px; background: #fff; color: #7c3aed; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 16px; display: block; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Staff Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/inventory.css">
 </head>
 <body>
-  <div class="banner">
-    <h1>Welcome, <%= user.first_name %> if mo edit this section adto sa folder   -> views -> staff -> dashboard.ejs same ranang .ejs sa html</h1>
-    <p>Role: <%= user.position %> &nbsp;·&nbsp; Staff Dashboard</p>
-    <form action="/logout" method="POST">
-      <button class="btn" type="submit">Sign Out</button>
-    </form>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/staff-sidebar', { active: 'dashboard' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Overview of current inventory alerts</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- ── STAT CARDS ─────────────────────────────── -->
+      <section class="stats stats--4">
+        <div class="stat-card stat-card--danger">
+          <div class="stat-card__icon stat-card__icon--red"><i data-lucide="ban" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Out of Stock</div>
+            <div class="stat-card__value"><%= stats.outOfStock %></div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--warn">
+          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="triangle-alert" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Low Stock</div>
+            <div class="stat-card__value"><%= stats.lowStock %></div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--danger">
+          <div class="stat-card__icon stat-card__icon--red"><i data-lucide="calendar-x" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Expired</div>
+            <div class="stat-card__value"><%= stats.expired %></div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--warn">
+          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="calendar-clock" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Expiring Soon</div>
+            <div class="stat-card__value"><%= stats.expiringSoon %></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── QUICK ACTIONS ─────────────────────────────── -->
+      <div class="staff-actions">
+        <a href="/staff/inventory"><button class="btn-primary"><i data-lucide="package" class="ic"></i> View Inventory</button></a>
+        <a href="/staff/transactions?tab=sale"><button class="btn-outline"><i data-lucide="circle-plus" class="ic"></i> Record a Transaction</button></a>
+      </div>
+
+      <!-- ── APPROVED RESTOCK BANNER ───────────────────── -->
+      <% if (approvedAwaitingDelivery > 0) { %>
+        <div class="notice-banner">
+          <div class="notice-banner__icon"><i data-lucide="truck" class="ic"></i></div>
+          <div class="notice-banner__text">
+            <%= approvedAwaitingDelivery %> restock <%= approvedAwaitingDelivery === 1 ? 'delivery' : 'deliveries' %> expected. Check in when <%= approvedAwaitingDelivery === 1 ? 'it arrives' : 'they arrive' %>.
+          </div>
+          <a href="/staff/transactions?tab=delivery" class="notice-banner__link">Delivery Check-in <i data-lucide="chevron-right" class="ic"></i></a>
+        </div>
+      <% } %>
+
+      <hr class="divider">
+
+      <p class="info-line">
+        <i data-lucide="info" class="ic"></i>
+        You've recorded <%= transactionsToday %> transaction<%= transactionsToday === 1 ? '' : 's' %> today
+      </p>
+
+    </main>
   </div>
-  <p>Staff dashboard — pages coming soon.</p>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
