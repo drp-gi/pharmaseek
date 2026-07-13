@@ -348,4 +348,87 @@ router.post('/reports/logs', async (req, res) => {
   }
 });
 
+// ── Management Logs (history view) ────────────────────────────
+const LOGS_PAGE_SIZE = 6;
+
+// [1, 2, '...', 5, 6, 7, '...', 12] style windowed page list
+function buildPageNumbers(current, total) {
+  const pages = [];
+  for (let p = 1; p <= total; p++) {
+    if (p === 1 || p === total || (p >= current - 1 && p <= current + 1)) {
+      pages.push(p);
+    } else if (pages[pages.length - 1] !== '...') {
+      pages.push('...');
+    }
+  }
+  return pages;
+}
+
+function truncate(text, len) {
+  if (!text) return '';
+  return text.length > len ? text.slice(0, len).trim() + '…' : text;
+}
+
+// GET /admin/management-logs
+router.get('/management-logs', async (req, res) => {
+  const from = req.query.from || manilaDateOffsetISO(-30);
+  const to = req.query.to || manilaTodayISO();
+  const search = req.query.search || '';
+  const requestedPage = Math.max(1, parseInt(req.query.page, 10) || 1);
+
+  try {
+    const clauses = ['ml.date_logged BETWEEN ? AND ?'];
+    const params = [from, `${to} 23:59:59`];
+    if (search) {
+      clauses.push('ml.findings LIKE ?');
+      params.push(`%${search}%`);
+    }
+    const whereClause = `WHERE ${clauses.join(' AND ')}`;
+
+    const [[{ count }]] = await db.query(
+      `SELECT COUNT(*) AS count FROM management_logs ml ${whereClause}`,
+      params
+    );
+    const totalCount = count;
+    const totalPages = Math.max(1, Math.ceil(totalCount / LOGS_PAGE_SIZE));
+    const currentPage = Math.min(requestedPage, totalPages);
+    const offset = (currentPage - 1) * LOGS_PAGE_SIZE;
+
+    const [rows] = await db.query(
+      `SELECT ml.log_id, ml.findings, ml.corrective_action, ml.date_logged,
+              u.first_name, u.last_name, m.medicine_name
+       FROM management_logs ml
+       LEFT JOIN users u ON ml.user_id = u.user_id
+       LEFT JOIN medicines m ON ml.medicine_id = m.medicine_id
+       ${whereClause}
+       ORDER BY ml.date_logged DESC
+       LIMIT ${LOGS_PAGE_SIZE} OFFSET ${offset}`,
+      params
+    );
+
+    const logs = rows.map((r) => ({
+      ...r,
+      findingsPreview: truncate(r.findings, 55),
+      actionPreview: truncate(r.corrective_action, 55)
+    }));
+
+    res.render('admin/management-logs', {
+      user: req.session.user,
+      logs, from, to, search,
+      currentPage, totalPages, totalCount,
+      pageNumbers: buildPageNumbers(currentPage, totalPages),
+      error: null
+    });
+  } catch (err) {
+    console.error('Management logs load error:', err);
+    res.render('admin/management-logs', {
+      user: req.session.user,
+      logs: [], from, to, search,
+      currentPage: 1, totalPages: 1, totalCount: 0,
+      pageNumbers: [1],
+      error: 'Could not load management logs. Please try again.'
+    });
+  }
+});
+
 module.exports = router;

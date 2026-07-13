@@ -221,3 +221,40 @@ VALUES
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ascorbic Acid 500mg'),
  (SELECT user_id FROM users WHERE username = 'mreyes_s'));
 
+
+-- MANAGEMENT LOGS
+-- Sample findings/corrective actions filed by Admin, so the Management
+-- Logs page has real entries to browse, search, and paginate.
+
+INSERT INTO management_logs (findings, corrective_action, date_logged, user_id, medicine_id)
+VALUES
+('Amoxicillin 500mg stock count does not match system records.',
+ 'Investigated with Staff, found 5 units miscounted during the last delivery. Corrected the inventory record.',
+ '2026-07-10 14:20:00',
+ (SELECT user_id FROM users WHERE username = 'admin'),
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Amoxicillin 500mg')),
+
+('Unusual spike in Paracetamol sales on July 7.',
+ 'Confirmed with Staff — a nearby community health drive caused a temporary demand surge. No further action needed.',
+ '2026-07-08 09:15:00',
+ (SELECT user_id FROM users WHERE username = 'admin'),
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Paracetamol 500mg')),
+
+('Temperature deviation in cold storage unit overnight.',
+ 'Re-calibrated the thermostat and checked affected stock for spoilage. None found; all units remain within safe range.',
+ '2026-07-05 08:00:00',
+ (SELECT user_id FROM users WHERE username = 'admin'),
+ NULL),
+
+('Incorrect labeling on a newly arrived Amoxicillin batch.',
+ 'Returned the entire batch to the supplier for relabeling. Replacement expected within the week.',
+ '2026-06-30 16:45:00',
+ (SELECT user_id FROM users WHERE username = 'admin'),
+ (SELECT medicine_id FROM medicines WHERE medicine_name = 'Amoxicillin 500mg')),
+
+('Staff reported recurring lag in the inventory system during peak hours.',
+ 'Contacted IT support for a server capacity review.',
+ '2026-06-28 11:30:00',
+ (SELECT user_id FROM users WHERE username = 'admin'),
+ NULL);
+

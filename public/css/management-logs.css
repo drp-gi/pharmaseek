@@ -1,0 +1,107 @@
+/* ============================================================
+   management-logs.css — PharmaSeek Management Logs (Admin)
+   (extends dashboard.css + users.css + reports.css)
+   ============================================================ */
+
+/* .filter-field input (reports.css) has the same CSS specificity as
+   .search input (dashboard.css) and loads after it, so it was silently
+   winning and stripping the left padding reserved for the icon —
+   causing the placeholder text to overlap the magnifying glass. This
+   selector is more specific, so it always wins regardless of load order. */
+.filter-field .search input {
+  padding: 10px 14px 10px 38px;
+  border-radius: 10px;
+  border-color: #e2e8f0;
+}
+
+/* ── Filed By avatar: single initial, Google-contacts-style ─
+   palette, but lightened (light tint background + a matching
+   saturated text color, rather than a solid saturated fill). ── */
+.log-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+.log-avatar--0 { background: #fee2e2; color: #dc2626; } /* red */
+.log-avatar--1 { background: #ffedd5; color: #ea580c; } /* orange */
+.log-avatar--2 { background: #fef3c7; color: #b45309; } /* amber */
+.log-avatar--3 { background: #dcfce7; color: #16a34a; } /* green */
+.log-avatar--4 { background: #ccfbf1; color: #0d9488; } /* teal */
+.log-avatar--5 { background: #dbeafe; color: #2563eb; } /* blue */
+.log-avatar--6 { background: #e0e7ff; color: #4f46e5; } /* indigo */
+.log-avatar--7 { background: #f3e8ff; color: #9333ea; } /* purple */
+.log-avatar--8 { background: #fce7f3; color: #db2777; } /* pink */
+.log-avatar--9 { background: #f1f5f9; color: #64748b; } /* blue-grey */
+
+/* Prev/next are <a> links (server-side pagination), so a native
+   :disabled state doesn't apply — this is its visual equivalent. */
+.page-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.filed-by {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-row { cursor: pointer; }
+.log-row:hover { background: #f7faff; }
+
+/* ── Table cell truncation ───────────────────────────────── */
+.tx-table td.truncate-cell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Log Details modal ───────────────────────────────────── */
+.log-detail__date {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+.log-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.log-detail__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+.log-detail__value {
+  font-size: 0.9rem;
+  color: #111827;
+  font-weight: 600;
+}
+.log-detail__text {
+  background: #f8fafc;
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  color: #111827;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .log-detail__grid { grid-template-columns: 1fr; gap: 12px; }
+  .tx-table td.truncate-cell { max-width: 160px; }
+}

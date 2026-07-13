@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Management Logs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/users.css">
+  <link rel="stylesheet" href="/css/reports.css">
+  <link rel="stylesheet" href="/css/management-logs.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/sidebar', { active: 'logs' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Management Logs</h1>
+          <p>Audit trail of findings and corrective actions</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- ── FILTER BAR ───────────────────────────────── -->
+      <section class="panel">
+        <form method="GET" action="/admin/management-logs" class="filter-row">
+          <div class="filter-field">
+            <label for="from">From</label>
+            <input type="date" id="from" name="from" value="<%= from %>" onchange="this.form.submit()">
+          </div>
+          <div class="filter-field">
+            <label for="to">To</label>
+            <input type="date" id="to" name="to" value="<%= to %>" onchange="this.form.submit()">
+          </div>
+          <div class="filter-field" style="flex:1; min-width:220px;">
+            <label for="search">Search Findings</label>
+            <div class="search">
+              <i data-lucide="search" class="ic"></i>
+              <input type="text" id="search" name="search" value="<%= search %>" placeholder="Search by keyword...">
+            </div>
+          </div>
+        </form>
+
+        <!-- ── TABLE ────────────────────────────────────── -->
+        <div class="table-wrap">
+          <table class="tx-table" id="logsTable">
+            <thead>
+              <tr>
+                <th>Date Logged</th>
+                <th>Findings</th>
+                <th>Corrective Action</th>
+                <th>Linked Medicine</th>
+                <th>Filed By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (logs.length === 0) { %>
+                <tr class="empty-row"><td colspan="5">No log entries in this range.</td></tr>
+              <% } else { %>
+                <% logs.forEach(function(log) { %>
+                  <% const filerName = log.first_name ? (log.first_name + ' ' + log.last_name) : 'Unknown'; %>
+                  <% const colorIndex = log.first_name ? log.first_name.charCodeAt(0) % 10 : 9; %>
+                  <tr class="log-row"
+                      data-log-trigger
+                      data-date="<%= new Date(log.date_logged).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %>"
+                      data-findings="<%= log.findings || '' %>"
+                      data-action="<%= log.corrective_action || '' %>"
+                      data-medicine="<%= log.medicine_name || '' %>"
+                      data-filer-name="<%= filerName %>"
+                      data-filer-initial="<%= log.first_name ? log.first_name[0].toUpperCase() : '?' %>"
+                      data-filer-color="<%= colorIndex %>">
+                    <td><%= new Date(log.date_logged).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
+                    <td class="truncate-cell medicine-name"><%= log.findingsPreview %></td>
+                    <td class="truncate-cell"><%= log.actionPreview %></td>
+                    <td><%= log.medicine_name || '—' %></td>
+                    <td>
+                      <div class="filed-by">
+                        <div class="log-avatar log-avatar--<%= colorIndex %>"><%= log.first_name ? log.first_name[0].toUpperCase() : '?' %></div>
+                        <%= filerName %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── PAGINATION ───────────────────────────────── -->
+        <div class="pagination">
+          <span class="pagination__summary">Showing <%= logs.length %> of <%= totalCount %> log entries</span>
+          <div class="pagination__nav">
+            <%
+              function pageHref(p) {
+                return '/admin/management-logs?page=' + p
+                  + '&from=' + encodeURIComponent(from)
+                  + '&to=' + encodeURIComponent(to)
+                  + '&search=' + encodeURIComponent(search);
+              }
+            %>
+            <% if (currentPage > 1) { %>
+              <a href="<%= pageHref(currentPage - 1) %>" class="page-btn page-btn--nav"><i data-lucide="chevron-left" class="ic"></i></a>
+            <% } else { %>
+              <span class="page-btn page-btn--nav page-btn--disabled"><i data-lucide="chevron-left" class="ic"></i></span>
+            <% } %>
+
+            <% pageNumbers.forEach(function(p) { %>
+              <% if (p === '...') { %>
+                <span class="page-btn page-btn--disabled">...</span>
+              <% } else { %>
+                <a href="<%= pageHref(p) %>" class="page-btn <%= p === currentPage ? 'page-btn--active' : '' %>"><%= p %></a>
+              <% } %>
+            <% }); %>
+
+            <% if (currentPage < totalPages) { %>
+              <a href="<%= pageHref(currentPage + 1) %>" class="page-btn page-btn--nav"><i data-lucide="chevron-right" class="ic"></i></a>
+            <% } else { %>
+              <span class="page-btn page-btn--nav page-btn--disabled"><i data-lucide="chevron-right" class="ic"></i></span>
+            <% } %>
+          </div>
+        </div>
+      </section>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
+  </div>
+
+  <!-- ── LOG DETAILS MODAL ─────────────────────────── -->
+  <div class="modal-overlay" id="logDetailOverlay">
+    <div class="modal">
+      <div class="modal__header">
+        <div>
+          <h3>Log Details</h3>
+          <p class="log-detail__date" id="logDetailDate"></p>
+        </div>
+        <button class="modal__close" id="closeLogDetail" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <div class="confirm-modal__body">
+        <div class="log-detail__grid">
+          <div>
+            <div class="log-detail__label">Linked Medicine</div>
+            <div class="log-detail__value" id="logDetailMedicine"></div>
+          </div>
+          <div>
+            <div class="log-detail__label">Filed By</div>
+            <div class="filed-by" id="logDetailFiledBy"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Findings</label>
+          <div class="log-detail__text" id="logDetailFindings"></div>
+        </div>
+
+        <div class="field">
+          <label>Corrective Action</label>
+          <div class="log-detail__text" id="logDetailAction"></div>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-primary" id="closeLogDetailBtn">Close Record</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="/js/management-logs.js"></script>
+</body>
+</html>
