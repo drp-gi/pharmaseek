@@ -62,8 +62,9 @@
   font-size: 0.9rem;
 }
 
-/* ── Discontinued view note ───────────────────────────────── */
-.discontinued-note {
+/* ── Catalog filter note (Discontinued / Expired / Low Stock / Out
+   of Stock views) ─────────────────────────────────────────── */
+.catalog-filter-note {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -76,7 +77,7 @@
   font-weight: 600;
   margin-bottom: 20px;
 }
-.discontinued-note .ic { width: 15px; height: 15px; color: #9ca3af; }
+.catalog-filter-note .ic { width: 15px; height: 15px; color: #9ca3af; }
 
 /* ── Medicine cards grid ──────────────────────────────────── */
 .medicine-grid {

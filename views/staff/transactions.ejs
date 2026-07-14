@@ -38,7 +38,7 @@
       <hr class="divider">
 
       <% if (error) { %>
-        <div class="alert alert--error">
+        <div class="alert alert--error" id="pageErrorAlert">
           <i data-lucide="circle-alert" class="ic"></i>
           <%= error %>
         </div>
@@ -52,33 +52,56 @@
       </div>
 
       <% if (tab === 'sale') { %>
-        <!-- ── RECORD NEW SALE ──────────────────────────── -->
+        <!-- ── NEW SALE ENTRY (cart) ─────────────────────── -->
         <section class="panel">
-          <div class="panel__header"><h2>Record New Sale</h2></div>
-          <form action="/staff/transactions/sale" method="POST" class="filter-row">
-            <div class="filter-field">
-              <label for="sale_medicine_id">Select Medicine</label>
-              <div class="medicine-select-row">
-                <select id="sale_medicine_id" name="medicine_id" required>
-                  <option value="">Select a medicine...</option>
-                  <% medicines.forEach(function(m) { %>
-                    <option value="<%= m.medicine_id %>" data-stock="<%= m.stock_quantity %>" data-image="<%= m.image_path || '' %>"><%= m.medicine_name %></option>
-                  <% }); %>
-                </select>
-                <div class="medicine-select-thumb">
-                  <i data-lucide="image" class="ic" id="saleMedicineThumbIcon"></i>
-                  <img id="saleMedicineThumbImg" alt="" hidden>
-                </div>
+          <div class="panel__header"><h2>New Sale Entry</h2></div>
+          <div class="filter-row">
+            <div class="filter-field medicine-search-field">
+              <label for="sale_medicine_search">Search Medicine</label>
+              <div class="search">
+                <i data-lucide="search" class="ic"></i>
+                <input type="text" id="sale_medicine_search" placeholder="Type medicine name..." autocomplete="off">
               </div>
+              <div class="medicine-suggestions" id="saleMedicineSuggestions"></div>
             </div>
             <div class="filter-field">
               <label for="sale_quantity">Quantity</label>
-              <input type="number" id="sale_quantity" name="quantity" min="1" placeholder="0" required>
+              <input type="number" id="sale_quantity" min="1" placeholder="Enter quantity">
             </div>
             <div class="filter-row__spacer"></div>
-            <button type="submit" class="btn-primary">Record Sale</button>
-          </form>
+            <button type="button" class="btn-primary" id="saleAddToCartBtn">
+              <i data-lucide="plus" class="ic"></i> Add to List
+            </button>
+          </div>
+          <p class="cart-add-error alert alert--error" id="saleCartAddError" style="display:none;"></p>
+
+          <!-- ── ITEMS TO RECORD ────────────────────────── -->
+          <div class="cart-section" id="saleCartSection" style="display:none;">
+            <h3 class="cart-section__title">Items to Record</h3>
+            <div class="table-wrap">
+              <table class="tx-table">
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="saleCartBody"></tbody>
+              </table>
+            </div>
+            <div class="cart-total">
+              <span>Total</span>
+              <span class="cart-total__value" id="saleCartTotal">₱0.00</span>
+            </div>
+            <p class="alert alert--error" id="saleCartSubmitError" style="display:none;"></p>
+            <button type="button" class="btn-primary" id="saleRecordBtn">Record Sale</button>
+          </div>
         </section>
+
+        <script id="saleMedicinesData" type="application/json"><%- JSON.stringify(medicines).replace(/</g, '\\u003c') %></script>
 
         <!-- ── TODAY'S SALES ────────────────────────────── -->
         <section class="panel">
@@ -104,40 +127,56 @@
         </section>
 
       <% } else if (tab === 'disposal') { %>
-        <!-- ── RECORD NEW DISPOSAL ──────────────────────── -->
+        <!-- ── NEW DISPOSAL ENTRY (cart) ─────────────────── -->
         <section class="panel">
-          <div class="panel__header"><h2>Record New Disposal</h2></div>
-          <form action="/staff/transactions/disposal" method="POST" class="transaction-form">
-            <div class="filter-row">
-              <div class="filter-field">
-                <label for="disposal_medicine_id">Select Medicine</label>
-                <div class="medicine-select-row">
-                  <select id="disposal_medicine_id" name="medicine_id" required>
-                    <option value="">Select a medicine...</option>
-                    <% medicines.forEach(function(m) { %>
-                      <option value="<%= m.medicine_id %>" data-stock="<%= m.stock_quantity %>" data-image="<%= m.image_path || '' %>"><%= m.medicine_name %></option>
-                    <% }); %>
-                  </select>
-                  <div class="medicine-select-thumb">
-                    <i data-lucide="image" class="ic" id="disposalMedicineThumbIcon"></i>
-                    <img id="disposalMedicineThumbImg" alt="" hidden>
-                  </div>
-                </div>
+          <div class="panel__header"><h2>New Disposal Entry</h2></div>
+          <div class="filter-row">
+            <div class="filter-field medicine-search-field">
+              <label for="disposal_medicine_search">Search Medicine</label>
+              <div class="search">
+                <i data-lucide="search" class="ic"></i>
+                <input type="text" id="disposal_medicine_search" placeholder="Type medicine name..." autocomplete="off">
               </div>
-              <div class="filter-field">
-                <label for="disposal_quantity">Quantity</label>
-                <input type="number" id="disposal_quantity" name="quantity" min="1" placeholder="0" required>
-              </div>
+              <div class="medicine-suggestions" id="disposalMedicineSuggestions"></div>
             </div>
             <div class="filter-field">
-              <label for="disposal_reason">Reason</label>
-              <input type="text" id="disposal_reason" name="disposal_reason" placeholder="e.g. Damaged packaging, expired stock" required>
+              <label for="disposal_quantity">Quantity</label>
+              <input type="number" id="disposal_quantity" min="1" placeholder="Enter quantity">
             </div>
-            <div>
-              <button type="submit" class="btn-primary">Record Disposal</button>
+            <div class="filter-row__spacer"></div>
+            <button type="button" class="btn-primary" id="disposalAddToCartBtn">
+              <i data-lucide="plus" class="ic"></i> Add to List
+            </button>
+          </div>
+          <p class="cart-add-error alert alert--error" id="disposalCartAddError" style="display:none;"></p>
+
+          <!-- ── ITEMS TO RECORD ────────────────────────── -->
+          <div class="cart-section" id="disposalCartSection" style="display:none;">
+            <h3 class="cart-section__title">Items to Record</h3>
+            <div class="table-wrap">
+              <table class="tx-table">
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Quantity</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="disposalCartBody"></tbody>
+              </table>
             </div>
-          </form>
+
+            <div class="filter-field cart-reason-field">
+              <label for="disposal_reason">Reason (applies to all items above)</label>
+              <input type="text" id="disposal_reason" placeholder="e.g. Damaged packaging, expired stock">
+            </div>
+
+            <p class="alert alert--error" id="disposalCartSubmitError" style="display:none;"></p>
+            <button type="button" class="btn-primary" id="disposalRecordBtn">Record Disposal</button>
+          </div>
         </section>
+
+        <script id="disposalMedicinesData" type="application/json"><%- JSON.stringify(medicines).replace(/</g, '\\u003c') %></script>
 
         <!-- ── TODAY'S DISPOSALS ────────────────────────── -->
         <section class="panel">
@@ -248,5 +287,6 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/staff-transactions.js"></script>
+  <script src="/js/notifications.js"></script>
 </body>
 </html>

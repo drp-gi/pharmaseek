@@ -5,14 +5,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const items           = Array.from(document.querySelectorAll('.medicine-item'));
   const groupEls         = Array.from(document.querySelectorAll('[data-category-group]'));
 
+  const filterNote     = document.getElementById('catalogFilterNote');
+  const filterNoteText = document.getElementById('catalogFilterNoteText');
+  const STATUS_FILTERS = ['out-of-stock', 'low-stock', 'expired'];
+  const STATUS_NOTES = {
+    'out-of-stock': 'Viewing out of stock medicines',
+    'low-stock': 'Viewing low stock medicines',
+    'expired': 'Viewing expired medicines'
+  };
+
   function applyFilters() {
     const query = (searchBox.value || '').trim().toLowerCase();
     const category = categoryFilter.value;
+    const viewingStatus = STATUS_FILTERS.includes(category) ? category : null;
+
+    if (filterNote) {
+      if (viewingStatus) {
+        filterNoteText.textContent = STATUS_NOTES[viewingStatus];
+        filterNote.style.display = '';
+      } else {
+        filterNote.style.display = 'none';
+      }
+    }
 
     items.forEach((item) => {
-      const matchesQuery    = !query || item.dataset.name.includes(query);
-      const matchesCategory = category === 'All' || item.dataset.categoryId === category;
-      item.style.display = (matchesQuery && matchesCategory) ? '' : 'none';
+      const matchesQuery = !query || item.dataset.name.includes(query);
+      const matches = viewingStatus
+        ? item.dataset.statusClass === viewingStatus
+        : (category === 'All' || item.dataset.categoryId === category);
+      item.style.display = (matchesQuery && matches) ? '' : 'none';
     });
 
     groupEls.forEach((group) => {

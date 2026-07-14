@@ -36,6 +36,109 @@
   object-fit: cover;
 }
 
+/* ── Medicine search autocomplete (Sale tab cart) ─────────── */
+.medicine-search-field {
+  position: relative;
+  flex: 1 1 320px;
+}
+.medicine-search-field .search { width: 100%; }
+/* Both dashboard.css's .search input and reports.css's .filter-field input
+   set left padding with equal specificity — reports.css loads later and
+   was winning, collapsing the padding meant to clear the search icon and
+   making typed text overlap it. This selector is more specific than both,
+   so it always wins regardless of stylesheet order. */
+.medicine-search-field .search input {
+  width: 100%;
+  padding-left: 38px;
+}
+
+.medicine-suggestions {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.medicine-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: none;
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.12s;
+}
+.medicine-suggestion:hover { background: #f4f6fb; }
+.medicine-suggestion--empty {
+  cursor: default;
+  color: #9ca3af;
+  font-size: 0.85rem;
+  justify-content: center;
+}
+.medicine-suggestion--empty:hover { background: none; }
+.medicine-suggestion__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.medicine-suggestion__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.medicine-suggestion__body { flex: 1; min-width: 0; }
+.medicine-suggestion__name { font-weight: 700; color: #111827; font-size: 0.92rem; }
+.medicine-suggestion__meta {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.medicine-suggestion .badge { flex-shrink: 0; }
+
+/* ── Sale cart ("Items to Record") ────────────────────────── */
+.cart-add-error { margin-top: 14px; }
+.cart-section { margin-top: 24px; }
+.cart-section__title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 12px;
+}
+.cart-remove-btn { margin-left: auto; }
+.cart-reason-field { margin-top: 20px; margin-bottom: 20px; max-width: 420px; }
+.cart-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 4px;
+  border-top: 1px solid #eef1f5;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #374151;
+}
+.cart-total__value { font-size: 1.15rem; font-weight: 800; color: #111827; }
+
 /* ── Today's Sales / Disposals list ──────────────────────── */
 .tx-list__row {
   display: flex;

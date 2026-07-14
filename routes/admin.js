@@ -552,4 +552,86 @@ router.post('/settings', async (req, res) => {
   }
 });
 
+// ── Notifications (bell dropdown) ─────────────────────────────
+// Computed live from current inventory/restock state rather than a stored
+// log — there's no notifications table, so "recent" here means "currently
+// true", plus the last few actual Management Log entries which do have
+// real timestamps.
+function plural(n, word, pluralWord) {
+  return n === 1 ? word : (pluralWord || word + 's');
+}
+
+router.get('/notifications', async (req, res) => {
+  try {
+    const notifications = [];
+
+    const [[{ outOfStock }]] = await db.query(
+      `SELECT COUNT(*) AS outOfStock FROM medicines WHERE stock_quantity = 0 AND status = 'Active'`
+    );
+    const [[{ lowStock }]] = await db.query(
+      `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity > 0 AND stock_quantity < stock_threshold AND status = 'Active'`
+    );
+    const [[{ expiringSoon }]] = await db.query(
+      `SELECT COUNT(*) AS expiringSoon FROM medicines
+       WHERE expiration_date IS NOT NULL
+         AND expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         AND status = 'Active'`
+    );
+    const [[{ pendingRestocks }]] = await db.query(
+      `SELECT COUNT(*) AS pendingRestocks FROM restock_requests WHERE status = 'Pending'`
+    );
+
+    if (outOfStock > 0) {
+      notifications.push({
+        icon: 'circle-alert', type: 'danger',
+        title: `${outOfStock} ${plural(outOfStock, 'medicine')} out of stock`,
+        link: '/admin/reports?tab=stock'
+      });
+    }
+    if (lowStock > 0) {
+      notifications.push({
+        icon: 'triangle-alert', type: 'warning',
+        title: `${lowStock} ${plural(lowStock, 'medicine')} running low on stock`,
+        link: '/admin/reports?tab=stock'
+      });
+    }
+    if (expiringSoon > 0) {
+      notifications.push({
+        icon: 'calendar-clock', type: 'warning',
+        title: `${expiringSoon} ${plural(expiringSoon, 'medicine')} expiring within 30 days`,
+        link: '/admin/reports?tab=expiration'
+      });
+    }
+    if (pendingRestocks > 0) {
+      notifications.push({
+        icon: 'package-search', type: 'info',
+        title: `${pendingRestocks} restock ${plural(pendingRestocks, 'request')} awaiting approval`,
+        link: '/admin/reports?tab=restock'
+      });
+    }
+
+    const [recentLogs] = await db.query(
+      `SELECT ml.findings, ml.date_logged, u.first_name, u.last_name
+       FROM management_logs ml
+       LEFT JOIN users u ON ml.user_id = u.user_id
+       ORDER BY ml.date_logged DESC
+       LIMIT 3`
+    );
+    recentLogs.forEach((log) => {
+      notifications.push({
+        icon: 'clipboard-list', type: 'info',
+        title: log.findings.length > 70 ? log.findings.slice(0, 70).trim() + '…' : log.findings,
+        subtitle: `Filed by ${log.first_name ? log.first_name + ' ' + log.last_name : 'Unknown'}`,
+        time: log.date_logged,
+        link: '/admin/management-logs'
+      });
+    });
+
+    res.json({ notifications });
+  } catch (err) {
+    console.error('Admin notifications error:', err);
+    res.status(500).json({ notifications: [] });
+  }
+});
+
 module.exports = router;

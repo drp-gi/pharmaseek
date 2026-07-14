@@ -5,34 +5,13 @@ const bcrypt          = require('bcryptjs');
 const isAuthenticated = require('../middleware/authMiddleware');
 const authorizeRole   = require('../middleware/roleMiddleware');
 const db              = require('../db/connection');
-const { manilaTodayISO, daysBetween } = require('../utils/manilaTime');
 const { confirmDelivery } = require('../utils/confirmDelivery');
 const { maybeCreateRestockRequest } = require('../utils/autoRestock');
+const { getStatusBadge } = require('../utils/medicineStatus');
 
 // All staff routes require login + Staff role
 router.use(isAuthenticated);
 router.use(authorizeRole(['Staff']));
-
-// Classifies a medicine into at most one alert badge, most urgent first:
-// Expired > Out of Stock > Expiring Soon (30 days) > Low Stock. Returns
-// null when the medicine is healthy (in stock, not expired/expiring).
-function getStatusBadge(m) {
-  const stockQty   = Number(m.stock_quantity);
-  const threshold  = Number(m.stock_threshold);
-  let daysLeft = null;
-  let isExpired = false;
-
-  if (m.expiration_date) {
-    daysLeft = daysBetween(manilaTodayISO(), m.expiration_date);
-    isExpired = daysLeft < 0;
-  }
-
-  if (isExpired) return { cls: 'expired', label: 'Expired' };
-  if (stockQty === 0) return { cls: 'out-of-stock', label: 'Out of Stock' };
-  if (daysLeft !== null && daysLeft <= 30) return { cls: 'expiring', label: 'Expiring Soon' };
-  if (stockQty < threshold) return { cls: 'low-stock', label: 'Low Stock' };
-  return null;
-}
 
 // GET /staff/dashboard
 router.get('/dashboard', async (req, res) => {
@@ -165,7 +144,7 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
   // Discontinued medicines can't be sold or disposed of, so they're left
   // out of this picker.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, stock_quantity, unit_price, image_path
+    `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, unit_price, image_path
      FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
   );
 
@@ -453,6 +432,80 @@ router.post('/settings', async (req, res) => {
       : 'Could not save changes. Please try again.';
     console.error('Settings update error:', err);
     rerender(message, null);
+  }
+});
+
+// ── Notifications (bell dropdown) ─────────────────────────────
+// Computed live from current inventory/restock state — there's no
+// notifications table, so "recent" here means "currently true".
+function plural(n, word, pluralWord) {
+  return n === 1 ? word : (pluralWord || word + 's');
+}
+
+router.get('/notifications', async (req, res) => {
+  try {
+    const notifications = [];
+
+    const [[{ outOfStock }]] = await db.query(
+      `SELECT COUNT(*) AS outOfStock FROM medicines WHERE stock_quantity = 0 AND status = 'Active'`
+    );
+    const [[{ lowStock }]] = await db.query(
+      `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity > 0 AND stock_quantity < stock_threshold AND status = 'Active'`
+    );
+    const [[{ expired }]] = await db.query(
+      `SELECT COUNT(*) AS expired FROM medicines
+       WHERE expiration_date IS NOT NULL AND expiration_date < CURDATE() AND status = 'Active'`
+    );
+    const [[{ expiringSoon }]] = await db.query(
+      `SELECT COUNT(*) AS expiringSoon FROM medicines
+       WHERE expiration_date IS NOT NULL
+         AND expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         AND status = 'Active'`
+    );
+    const [[{ approvedAwaitingDelivery }]] = await db.query(
+      `SELECT COUNT(*) AS approvedAwaitingDelivery FROM restock_requests WHERE status = 'Approved'`
+    );
+
+    if (outOfStock > 0) {
+      notifications.push({
+        icon: 'circle-alert', type: 'danger',
+        title: `${outOfStock} ${plural(outOfStock, 'medicine')} out of stock`,
+        link: '/staff/inventory'
+      });
+    }
+    if (expired > 0) {
+      notifications.push({
+        icon: 'calendar-x', type: 'danger',
+        title: `${expired} ${plural(expired, 'medicine')} expired`,
+        link: '/staff/inventory'
+      });
+    }
+    if (lowStock > 0) {
+      notifications.push({
+        icon: 'triangle-alert', type: 'warning',
+        title: `${lowStock} ${plural(lowStock, 'medicine')} running low on stock`,
+        link: '/staff/inventory'
+      });
+    }
+    if (expiringSoon > 0) {
+      notifications.push({
+        icon: 'calendar-clock', type: 'warning',
+        title: `${expiringSoon} ${plural(expiringSoon, 'medicine')} expiring within 30 days`,
+        link: '/staff/inventory'
+      });
+    }
+    if (approvedAwaitingDelivery > 0) {
+      notifications.push({
+        icon: 'truck', type: 'info',
+        title: `${approvedAwaitingDelivery} ${plural(approvedAwaitingDelivery, 'delivery', 'deliveries')} awaiting check-in`,
+        link: '/staff/transactions?tab=delivery'
+      });
+    }
+
+    res.json({ notifications });
+  } catch (err) {
+    console.error('Staff notifications error:', err);
+    res.status(500).json({ notifications: [] });
   }
 });
 

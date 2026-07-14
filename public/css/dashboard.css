@@ -141,6 +141,9 @@ html, body {
 .sidebar__profile-role {
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sidebar__logout {
   display: inline-flex;
@@ -258,6 +261,82 @@ html, body {
   border-radius: 50%;
   background: #ef4444;
   border: 1.5px solid #fff;
+}
+
+/* ── Notifications dropdown (bell) ───────────────────────────
+   Positioned the same way as .bell itself — absolute within .main,
+   which is why it stays pinned on screen rather than scrolling away
+   with page content. Injected by notifications.js on every page. */
+.notif-panel {
+  display: none;
+  position: absolute;
+  top: 80px;
+  right: 40px;
+  width: 340px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
+  z-index: 60;
+}
+.notif-panel.is-open { display: block; }
+.notif-panel__header {
+  padding: 16px 18px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #111827;
+  border-bottom: 1px solid #eef1f5;
+}
+.notif-panel__list { padding: 6px; }
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.12s;
+}
+.notif-item:hover { background: #f7faff; }
+.notif-item__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.notif-item__icon .ic { width: 16px; height: 16px; }
+.notif-item--danger .notif-item__icon  { background: #fee2e2; color: #dc2626; }
+.notif-item--warning .notif-item__icon { background: #fef3c7; color: #d97706; }
+.notif-item--info .notif-item__icon    { background: #dbeafe; color: #1d6ed8; }
+.notif-item__body { flex: 1; min-width: 0; }
+.notif-item__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+}
+.notif-item__subtitle { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+.notif-item__time { font-size: 0.7rem; color: #9ca3af; margin-top: 4px; }
+.notif-empty {
+  padding: 32px 20px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .notif-panel { right: 16px; left: 16px; width: auto; }
 }
 
 .alert {
@@ -738,6 +817,7 @@ table.tx-table {
   .sidebar__profile { display: none; }
   .main { height: auto; overflow-y: visible; padding: 24px; }
   .bell { top: 24px; right: 24px; }
+  .notif-panel { top: 72px; right: 24px; }
   .topbar { flex-direction: column; }
   .topbar__actions { padding-right: 0; }
   .search input { width: 100%; }

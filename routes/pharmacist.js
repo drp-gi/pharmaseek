@@ -9,6 +9,7 @@ const authorizeRole    = require('../middleware/roleMiddleware');
 const db               = require('../db/connection');
 const { confirmDelivery } = require('../utils/confirmDelivery');
 const { maybeCreateRestockRequest } = require('../utils/autoRestock');
+const { getStatusBadge } = require('../utils/medicineStatus');
 
 // All pharmacist routes require login + Pharmacist role
 router.use(isAuthenticated);
@@ -318,6 +319,12 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
     params
   );
 
+  // Discontinued medicines keep their own badge in the card (handled in the
+  // view) rather than also carrying a stock/expiry status.
+  medicines.forEach((med) => {
+    med.statusBadge = med.status === 'Discontinued' ? null : getStatusBadge(med);
+  });
+
   const groups = [];
   for (const med of medicines) {
     const groupName = med.category_name || 'Uncategorized';
@@ -462,7 +469,7 @@ async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = nul
   // Discontinued medicines can't be sold or disposed of, so they're left
   // out of this picker.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, stock_quantity, unit_price, image_path
+    `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, unit_price, image_path
      FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
   );
 
@@ -750,6 +757,69 @@ router.post('/settings', async (req, res) => {
       : 'Could not save changes. Please try again.';
     console.error('Settings update error:', err);
     rerender(message, null);
+  }
+});
+
+// ── Notifications (bell dropdown) ─────────────────────────────
+// Computed live from current inventory/restock state — there's no
+// notifications table, so "recent" here means "currently true".
+function plural(n, word, pluralWord) {
+  return n === 1 ? word : (pluralWord || word + 's');
+}
+
+router.get('/notifications', async (req, res) => {
+  try {
+    const notifications = [];
+
+    const [[{ lowStock }]] = await db.query(
+      `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity < stock_threshold AND status = 'Active'`
+    );
+    const [[{ expiringSoon }]] = await db.query(
+      `SELECT COUNT(*) AS expiringSoon FROM medicines
+       WHERE expiration_date IS NOT NULL
+         AND expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         AND status = 'Active'`
+    );
+    const [[{ pendingRestocks }]] = await db.query(
+      `SELECT COUNT(*) AS pendingRestocks FROM restock_requests WHERE status = 'Pending'`
+    );
+    const [[{ approvedAwaitingDelivery }]] = await db.query(
+      `SELECT COUNT(*) AS approvedAwaitingDelivery FROM restock_requests WHERE status = 'Approved'`
+    );
+
+    if (pendingRestocks > 0) {
+      notifications.push({
+        icon: 'package-search', type: 'warning',
+        title: `${pendingRestocks} restock ${plural(pendingRestocks, 'request')} need your approval`,
+        link: '/pharmacist/restock-requests?tab=Pending'
+      });
+    }
+    if (lowStock > 0) {
+      notifications.push({
+        icon: 'triangle-alert', type: 'warning',
+        title: `${lowStock} ${plural(lowStock, 'medicine')} running low on stock`,
+        link: '/pharmacist/inventory'
+      });
+    }
+    if (expiringSoon > 0) {
+      notifications.push({
+        icon: 'calendar-clock', type: 'warning',
+        title: `${expiringSoon} ${plural(expiringSoon, 'medicine')} expiring within 30 days`,
+        link: '/pharmacist/inventory'
+      });
+    }
+    if (approvedAwaitingDelivery > 0) {
+      notifications.push({
+        icon: 'truck', type: 'info',
+        title: `${approvedAwaitingDelivery} ${plural(approvedAwaitingDelivery, 'delivery', 'deliveries')} awaiting check-in`,
+        link: '/pharmacist/transactions?tab=delivery'
+      });
+    }
+
+    res.json({ notifications });
+  } catch (err) {
+    console.error('Pharmacist notifications error:', err);
+    res.status(500).json({ notifications: [] });
   }
 });
 

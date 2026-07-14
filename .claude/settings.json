@@ -4,7 +4,23 @@
       "Read(//c/tmp/**)",
       "Bash(curl -s -b pharm_cookies.txt \"http://localhost:3000/pharmacist/restock-requests?tab=Pending\" -o rr2.html -w \"status:%{http_code}\\\\n\")",
       "Bash(cp \"/c/Users/yaa/AppData/Local/Temp/claude/c--Users-yaa-pharmaseek/c7259749-aa17-424d-af9d-84f6b2358194/scratchpad/pw_dismiss3.js\" /tmp/pw3/pw_dismiss3.js)",
-      "Bash(node /tmp/pw3/pw_dismiss3.js)"
+      "Bash(node /tmp/pw3/pw_dismiss3.js)",
+      "Bash(node --check public/js/pharmacist-transactions.js)",
+      "Bash(node --check routes/staff.js)",
+      "Bash(mkdir -p /tmp/pwtest)",
+      "Read(//tmp/**)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Read(//tmp/pwtest/**)",
+      "Bash(cp \"/c/Users/yaa/AppData/Local/Temp/claude/c--Users-yaa-pharmaseek/c7259749-aa17-424d-af9d-84f6b2358194/scratchpad/test_cart.js\" /tmp/pwtest/test_cart.js)",
+      "Bash(node /tmp/pwtest/test_cart.js)",
+      "Bash(cp \"/c/Users/yaa/AppData/Local/Temp/claude/c--Users-yaa-pharmaseek/c7259749-aa17-424d-af9d-84f6b2358194/scratchpad/test_error.js\" /tmp/pwtest/test_error.js)",
+      "Bash(node /tmp/pwtest/test_error.js)",
+      "Bash(cp \"/c/Users/yaa/AppData/Local/Temp/claude/c--Users-yaa-pharmaseek/c7259749-aa17-424d-af9d-84f6b2358194/scratchpad/test_race.js\" /tmp/pwtest/test_race.js)",
+      "Bash(node /tmp/pwtest/test_race.js)",
+      "Bash(node --check c:/Users/yaa/pharmaseek/routes/staff.js)",
+      "Bash(node --check c:/Users/yaa/pharmaseek/routes/pharmacist.js)",
+      "Bash(node --check c:/Users/yaa/pharmaseek/utils/medicineStatus.js)"
     ]
   }
 }

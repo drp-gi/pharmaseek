@@ -5,14 +5,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const items           = Array.from(document.querySelectorAll('.medicine-item'));
   const groupEls         = Array.from(document.querySelectorAll('[data-category-group]'));
 
-  const discontinuedNote = document.getElementById('discontinuedNote');
+  const filterNote     = document.getElementById('catalogFilterNote');
+  const filterNoteText = document.getElementById('catalogFilterNoteText');
+  const STATUS_FILTERS = ['out-of-stock', 'low-stock', 'expired'];
+  const STATUS_NOTES = {
+    'out-of-stock': 'Viewing out of stock medicines',
+    'low-stock': 'Viewing low stock medicines',
+    'expired': 'Viewing expired medicines',
+    'Discontinued': 'Viewing discontinued medicines'
+  };
 
   function applyFilters() {
     const query = (searchBox.value || '').trim().toLowerCase();
     const category = categoryFilter.value;
     const viewingDiscontinued = category === 'Discontinued';
+    const viewingStatus = STATUS_FILTERS.includes(category) ? category : null;
 
-    if (discontinuedNote) discontinuedNote.style.display = viewingDiscontinued ? '' : 'none';
+    if (filterNote) {
+      const noteKey = viewingDiscontinued ? 'Discontinued' : viewingStatus;
+      if (noteKey) {
+        filterNoteText.textContent = STATUS_NOTES[noteKey];
+        filterNote.style.display = '';
+      } else {
+        filterNote.style.display = 'none';
+      }
+    }
 
     items.forEach((item) => {
       const matchesQuery  = !query || item.dataset.name.includes(query);
@@ -21,6 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
       let visible;
       if (viewingDiscontinued) {
         visible = matchesQuery && isDiscontinued;
+      } else if (viewingStatus) {
+        visible = matchesQuery && !isDiscontinued && item.dataset.statusClass === viewingStatus;
       } else {
         const matchesCategory = category === 'All' || item.dataset.categoryId === category;
         visible = matchesQuery && matchesCategory && !isDiscontinued;

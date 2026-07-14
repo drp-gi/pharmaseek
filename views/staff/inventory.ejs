@@ -54,8 +54,15 @@
           <% categories.forEach(function(c) { %>
             <option value="<%= c.category_id %>"><%= c.category_name %></option>
           <% }); %>
+          <option value="out-of-stock">Out of Stock</option>
+          <option value="low-stock">Low Stock</option>
+          <option value="expired">Expired</option>
         </select>
       </div>
+
+      <p class="catalog-filter-note" id="catalogFilterNote" style="display:none;">
+        <i data-lucide="info" class="ic"></i> <span id="catalogFilterNoteText"></span>
+      </p>
 
       <!-- ── CATALOG ──────────────────────────────────── -->
       <% if (groups.length === 0) { %>
@@ -180,5 +187,6 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/staff-inventory.js"></script>
+  <script src="/js/notifications.js"></script>
 </body>
 </html>

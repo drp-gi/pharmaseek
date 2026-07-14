@@ -57,12 +57,15 @@
           <% categories.forEach(function(c) { %>
             <option value="<%= c.category_id %>"><%= c.category_name %></option>
           <% }); %>
+          <option value="out-of-stock">Out of Stock</option>
+          <option value="low-stock">Low Stock</option>
+          <option value="expired">Expired</option>
           <option value="Discontinued">Discontinued</option>
         </select>
       </div>
 
-      <p class="discontinued-note" id="discontinuedNote" style="display:none;">
-        <i data-lucide="archive" class="ic"></i> Viewing discontinued medicines
+      <p class="catalog-filter-note" id="catalogFilterNote" style="display:none;">
+        <i data-lucide="info" class="ic"></i> <span id="catalogFilterNoteText"></span>
       </p>
 
       <!-- ── CATALOG ──────────────────────────────────── -->
@@ -98,10 +101,14 @@
                         data-supplier-id="<%= m.supplier_id || '' %>"
                         data-supplier-name="<%= m.supplier_name || '' %>"
                         data-supplier-phone="<%= m.supplier_phone || '' %>"
-                        data-image-path="<%= m.image_path || '' %>">
+                        data-image-path="<%= m.image_path || '' %>"
+                        data-status-class="<%= m.statusBadge ? m.statusBadge.cls : '' %>"
+                        data-status-label="<%= m.statusBadge ? m.statusBadge.label : '' %>">
                   <div class="medicine-card__image">
                     <% if (isDiscontinued) { %>
                       <span class="medicine-card__badge"><span class="badge badge--discontinued">Discontinued</span></span>
+                    <% } else if (m.statusBadge) { %>
+                      <span class="medicine-card__badge"><span class="badge badge--<%= m.statusBadge.cls %>"><%= m.statusBadge.label %></span></span>
                     <% } %>
                     <% if (m.image_path) { %>
                       <img src="<%= m.image_path %>" alt="<%= m.medicine_name %>">
@@ -338,5 +345,6 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/inventory.js"></script>
+  <script src="/js/notifications.js"></script>
 </body>
 </html>
