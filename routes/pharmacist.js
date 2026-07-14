@@ -3,10 +3,12 @@ const express         = require('express');
 const router           = express.Router();
 const multer           = require('multer');
 const path              = require('path');
+const bcrypt           = require('bcryptjs');
 const isAuthenticated  = require('../middleware/authMiddleware');
 const authorizeRole    = require('../middleware/roleMiddleware');
 const db               = require('../db/connection');
 const { confirmDelivery } = require('../utils/confirmDelivery');
+const { maybeCreateRestockRequest } = require('../utils/autoRestock');
 
 // All pharmacist routes require login + Pharmacist role
 router.use(isAuthenticated);
@@ -45,6 +47,7 @@ function uploadMedicineImage(req, res, next) {
 
 // GET /pharmacist/dashboard
 router.get('/dashboard', async (req, res) => {
+  
   try {
     const [[{ totalMedicines }]] = await db.query(
       `SELECT COUNT(*) AS totalMedicines FROM medicines`
@@ -85,7 +88,7 @@ router.get('/dashboard', async (req, res) => {
     );
 
     const [pendingRestockItems] = await db.query(
-      `SELECT rr.request_id, rr.quantity_requested, rr.request_date, m.medicine_name
+      `SELECT rr.request_id, rr.quantity_requested, rr.request_date, m.medicine_name, m.stock_quantity
        FROM restock_requests rr
        JOIN medicines m ON rr.medicine_id = m.medicine_id
        WHERE rr.status = 'Pending'
@@ -130,7 +133,7 @@ async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
 
   const [requests] = await db.query(
     `SELECT rr.request_id, rr.quantity_requested, rr.request_date, rr.notes,
-            m.medicine_name, c.category_name, st.transaction_quantity AS quantity_received
+            m.medicine_name, m.stock_quantity, c.category_name, st.transaction_quantity AS quantity_received
      FROM restock_requests rr
      JOIN medicines m ON rr.medicine_id = m.medicine_id
      LEFT JOIN categories c ON m.category_id = c.category_id
@@ -140,8 +143,11 @@ async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
     [activeTab]
   );
 
+  // Discontinued medicines aren't restockable, so they're left out of the
+  // request dropdown entirely.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, stock_quantity, stock_threshold FROM medicines ORDER BY medicine_name`
+    `SELECT medicine_id, medicine_name, stock_quantity, stock_threshold
+     FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
   );
 
   res.render('pharmacist/restock-requests', {
@@ -218,12 +224,31 @@ router.post('/restock-requests/:id/approve', async (req, res) => {
 });
 
 // POST /pharmacist/restock-requests/:id/dismiss
+// Dismissing doesn't change stock, so it normally just goes quiet until a
+// real event (a Sale, Disposal, or Delivery on that medicine) re-triggers
+// the auto-check on its own. A medicine at 0 stock is the one exception —
+// nothing can be sold/disposed from empty stock, and Delivery Check-in
+// needs an Approved request that would no longer exist once this is
+// cancelled, so it's the one case with no other event left to ever catch
+// it again. Rather than cancel it and immediately regenerate a duplicate,
+// the request is simply refused outright — the UI explains why before it
+// ever reaches here, but this is the actual enforcement, not just the copy.
 router.post('/restock-requests/:id/dismiss', async (req, res) => {
   try {
-    await db.query(
-      `UPDATE restock_requests SET status = 'Cancelled' WHERE request_id = ? AND status = 'Pending'`,
+    const [[request]] = await db.query(
+      `SELECT rr.request_id, m.stock_quantity
+       FROM restock_requests rr
+       JOIN medicines m ON rr.medicine_id = m.medicine_id
+       WHERE rr.request_id = ? AND rr.status = 'Pending'`,
       [req.params.id]
     );
+
+    if (request && request.stock_quantity > 0) {
+      await db.query(
+        `UPDATE restock_requests SET status = 'Cancelled' WHERE request_id = ? AND status = 'Pending'`,
+        [req.params.id]
+      );
+    }
   } catch (err) {
     console.error('Dismiss restock request error:', err);
   }
@@ -276,10 +301,13 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
   }
   const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
+  // Both Active and Discontinued medicines are fetched together — the
+  // catalog page toggles between them client-side (via the category/
+  // status dropdown) rather than round-tripping to the server.
   const [medicines] = await db.query(
     `SELECT m.medicine_id, m.medicine_name, m.brand_name, m.medicine_type, m.dose,
             m.description, m.unit_price, m.stock_quantity, m.stock_threshold,
-            m.expiration_date, m.image_path,
+            m.expiration_date, m.image_path, m.status,
             c.category_id, c.category_name,
             s.supplier_id, s.company_name AS supplier_name, s.phone_number AS supplier_phone
      FROM medicines m
@@ -295,10 +323,11 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
     const groupName = med.category_name || 'Uncategorized';
     let group = groups.find((g) => g.name === groupName);
     if (!group) {
-      group = { name: groupName, items: [] };
+      group = { name: groupName, items: [], activeCount: 0 };
       groups.push(group);
     }
     group.items.push(med);
+    if (med.status !== 'Discontinued') group.activeCount++;
   }
 
   res.render('pharmacist/inventory', {
@@ -400,17 +429,327 @@ router.post('/inventory/:id', uploadMedicineImage, async (req, res) => {
   }
 });
 
-// POST /pharmacist/inventory/:id/delete
-router.post('/inventory/:id/delete', async (req, res) => {
+// POST /pharmacist/inventory/:id/discontinue
+// Soft-delete: hides the medicine from active inventory (catalog, sale/
+// disposal pickers, restock requests) while keeping its stock_transactions
+// and management_logs history intact. Reversible via /reactivate.
+router.post('/inventory/:id/discontinue', async (req, res) => {
   try {
-    await db.query(`DELETE FROM medicines WHERE medicine_id = ?`, [req.params.id]);
+    await db.query(`UPDATE medicines SET status = 'Discontinued' WHERE medicine_id = ?`, [req.params.id]);
     res.redirect('/pharmacist/inventory');
   } catch (err) {
-    console.error('Delete medicine error:', err);
-    const message = err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED'
-      ? 'Cannot delete this medicine — it has related stock transactions, restock requests, or logs.'
-      : 'Could not delete this medicine. Please try again.';
-    await loadInventoryPage(res, req.session.user, { search: '', category: 'All' }, message);
+    console.error('Discontinue medicine error:', err);
+    await loadInventoryPage(res, req.session.user, { search: '', category: 'All' }, 'Could not remove this medicine from the catalog. Please try again.');
+  }
+});
+
+// POST /pharmacist/inventory/:id/reactivate
+router.post('/inventory/:id/reactivate', async (req, res) => {
+  try {
+    await db.query(`UPDATE medicines SET status = 'Active' WHERE medicine_id = ?`, [req.params.id]);
+    res.redirect('/pharmacist/inventory');
+  } catch (err) {
+    console.error('Reactivate medicine error:', err);
+    await loadInventoryPage(res, req.session.user, { search: '', category: 'All' }, 'Could not reactivate this medicine. Please try again.');
+  }
+});
+
+// ── Shared loader for the Transactions page ──────────────────────
+async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = null) {
+  const validTabs = ['sale', 'disposal', 'delivery'];
+  const activeTab = validTabs.includes(tab) ? tab : 'sale';
+
+  // Discontinued medicines can't be sold or disposed of, so they're left
+  // out of this picker.
+  const [medicines] = await db.query(
+    `SELECT medicine_id, medicine_name, stock_quantity, unit_price, image_path
+     FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
+  );
+
+  let todaysEntries = [];
+  let approvedDeliveries = [];
+
+  if (activeTab === 'delivery') {
+    [approvedDeliveries] = await db.query(
+      `SELECT rr.request_id, rr.quantity_requested, rr.request_date, m.medicine_name
+       FROM restock_requests rr
+       JOIN medicines m ON rr.medicine_id = m.medicine_id
+       WHERE rr.status = 'Approved'
+       ORDER BY rr.request_date ASC`
+    );
+  } else {
+    [todaysEntries] = await db.query(
+      `SELECT st.transaction_id, st.transaction_quantity, st.transaction_date, st.disposal_reason,
+              m.medicine_name, m.unit_price
+       FROM stock_transactions st
+       JOIN medicines m ON st.medicine_id = m.medicine_id
+       WHERE st.transaction_type = ? AND st.user_id = ? AND DATE(st.transaction_date) = CURDATE()
+       ORDER BY st.transaction_date DESC`,
+      [activeTab, sessionUser.user_id]
+    );
+  }
+
+  res.render('pharmacist/transactions', {
+    user: sessionUser,
+    tab: activeTab,
+    medicines,
+    todaysEntries,
+    approvedDeliveries,
+    error
+  });
+}
+
+// GET /pharmacist/transactions
+router.get('/transactions', async (req, res) => {
+  try {
+    await loadPharmacistTransactionsPage(res, req.session.user, req.query.tab);
+  } catch (err) {
+    console.error('Transactions load error:', err);
+    res.render('pharmacist/transactions', {
+      user: req.session.user,
+      tab: 'sale',
+      medicines: [],
+      todaysEntries: [],
+      approvedDeliveries: [],
+      error: 'Could not load transactions. Please try again.'
+    });
+  }
+});
+
+// POST /pharmacist/transactions/sale — record a sale, decrementing stock
+router.post('/transactions/sale', async (req, res) => {
+  const { medicine_id, quantity } = req.body;
+  const qty = Number(quantity);
+
+  if (!medicine_id || !qty || qty <= 0) {
+    return loadPharmacistTransactionsPage(res, req.session.user, 'sale', 'Please select a medicine and enter a valid quantity.');
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [[medicine]] = await connection.query(
+      `SELECT stock_quantity FROM medicines WHERE medicine_id = ? FOR UPDATE`,
+      [medicine_id]
+    );
+
+    if (!medicine) {
+      await connection.rollback();
+      return loadPharmacistTransactionsPage(res, req.session.user, 'sale', 'That medicine no longer exists.');
+    }
+    if (qty > medicine.stock_quantity) {
+      await connection.rollback();
+      return loadPharmacistTransactionsPage(res, req.session.user, 'sale', `Only ${medicine.stock_quantity} units in stock — can't sell ${qty}.`);
+    }
+
+    await connection.query(
+      `UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE medicine_id = ?`,
+      [qty, medicine_id]
+    );
+    await connection.query(
+      `INSERT INTO stock_transactions (transaction_type, transaction_quantity, medicine_id, user_id)
+       VALUES ('sale', ?, ?, ?)`,
+      [qty, medicine_id, req.session.user.user_id]
+    );
+
+    await maybeCreateRestockRequest(connection, {
+      medicineId: medicine_id,
+      userId: req.session.user.user_id,
+      reason: 'Auto-generated: stock fell below threshold after a sale.'
+    });
+
+    await connection.commit();
+    res.redirect('/pharmacist/transactions?tab=sale');
+  } catch (err) {
+    console.error('Record sale error:', err);
+    if (connection) { try { await connection.rollback(); } catch (rollbackErr) { console.error(rollbackErr); } }
+    await loadPharmacistTransactionsPage(res, req.session.user, 'sale', 'Could not record this sale. Please try again.');
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// POST /pharmacist/transactions/disposal — record a disposal, decrementing stock
+router.post('/transactions/disposal', async (req, res) => {
+  const { medicine_id, quantity, disposal_reason } = req.body;
+  const qty = Number(quantity);
+
+  if (!medicine_id || !qty || qty <= 0 || !disposal_reason) {
+    return loadPharmacistTransactionsPage(res, req.session.user, 'disposal', 'Please select a medicine, enter a valid quantity, and provide a reason.');
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [[medicine]] = await connection.query(
+      `SELECT stock_quantity FROM medicines WHERE medicine_id = ? FOR UPDATE`,
+      [medicine_id]
+    );
+
+    if (!medicine) {
+      await connection.rollback();
+      return loadPharmacistTransactionsPage(res, req.session.user, 'disposal', 'That medicine no longer exists.');
+    }
+    if (qty > medicine.stock_quantity) {
+      await connection.rollback();
+      return loadPharmacistTransactionsPage(res, req.session.user, 'disposal', `Only ${medicine.stock_quantity} units in stock — can't dispose ${qty}.`);
+    }
+
+    await connection.query(
+      `UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE medicine_id = ?`,
+      [qty, medicine_id]
+    );
+    await connection.query(
+      `INSERT INTO stock_transactions (transaction_type, transaction_quantity, disposal_reason, medicine_id, user_id)
+       VALUES ('disposal', ?, ?, ?, ?)`,
+      [qty, disposal_reason, medicine_id, req.session.user.user_id]
+    );
+
+    await maybeCreateRestockRequest(connection, {
+      medicineId: medicine_id,
+      userId: req.session.user.user_id,
+      reason: 'Auto-generated: stock fell below threshold after a disposal.'
+    });
+
+    await connection.commit();
+    res.redirect('/pharmacist/transactions?tab=disposal');
+  } catch (err) {
+    console.error('Record disposal error:', err);
+    if (connection) { try { await connection.rollback(); } catch (rollbackErr) { console.error(rollbackErr); } }
+    await loadPharmacistTransactionsPage(res, req.session.user, 'disposal', 'Could not record this disposal. Please try again.');
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// POST /pharmacist/transactions/checkin/:id
+// Requires the actually-received quantity from the Confirm Delivery popup
+// (not just trusting the original requested quantity) before stock moves.
+router.post('/transactions/checkin/:id', async (req, res) => {
+  const qty = Number(req.body.quantity_received);
+
+  if (qty > 0) {
+    try {
+      await confirmDelivery(db, {
+        requestId: req.params.id,
+        quantityReceived: qty,
+        notes: req.body.notes,
+        userId: req.session.user.user_id
+      });
+    } catch (err) {
+      console.error('Delivery check-in error:', err);
+    }
+  }
+
+  res.redirect('/pharmacist/transactions?tab=delivery');
+});
+
+// ── Settings ─────────────────────────────────────────────────
+
+// GET /pharmacist/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const [[profile]] = await db.query(
+      `SELECT first_name, last_name, username, email, position, status FROM users WHERE user_id = ?`,
+      [req.session.user.user_id]
+    );
+    res.render('pharmacist/settings', { user: req.session.user, profile, error: null, success: null });
+  } catch (err) {
+    console.error('Settings load error:', err);
+    res.render('pharmacist/settings', {
+      user: req.session.user,
+      profile: req.session.user,
+      error: 'Could not load settings. Please try again.',
+      success: null
+    });
+  }
+});
+
+// POST /pharmacist/settings — updates the pharmacist's own profile and
+// (optionally) their password, from the page's single Save button.
+router.post('/settings', async (req, res) => {
+  const {
+    first_name, last_name, username, email,
+    current_password, new_password, confirm_password
+  } = req.body;
+
+  const rerender = (error, success, profileOverride) => {
+    res.render('pharmacist/settings', {
+      user: req.session.user,
+      profile: profileOverride || { ...req.session.user, first_name, last_name, username, email },
+      error,
+      success
+    });
+  };
+
+  if (!first_name || !last_name || !username) {
+    return rerender('Please fill in all required fields.', null);
+  }
+
+  const wantsPasswordChange = current_password || new_password || confirm_password;
+  if (wantsPasswordChange) {
+    if (!current_password || !new_password || !confirm_password) {
+      return rerender('Fill in all three password fields to change your password.', null);
+    }
+    if (new_password !== confirm_password) {
+      return rerender('New password and confirmation do not match.', null);
+    }
+    if (new_password.length < 6) {
+      return rerender('New password must be at least 6 characters.', null);
+    }
+  }
+
+  try {
+    let hashedPassword = null;
+    if (wantsPasswordChange) {
+      const [[dbUser]] = await db.query(
+        `SELECT password FROM users WHERE user_id = ?`,
+        [req.session.user.user_id]
+      );
+      const matches = await bcrypt.compare(current_password, dbUser.password);
+      if (!matches) {
+        return rerender('Current password is incorrect.', null);
+      }
+      hashedPassword = await bcrypt.hash(new_password, 10);
+    }
+
+    if (hashedPassword) {
+      await db.query(
+        `UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, password = ? WHERE user_id = ?`,
+        [first_name, last_name, username, email || null, hashedPassword, req.session.user.user_id]
+      );
+    } else {
+      await db.query(
+        `UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ? WHERE user_id = ?`,
+        [first_name, last_name, username, email || null, req.session.user.user_id]
+      );
+    }
+
+    req.session.user.first_name = first_name;
+    req.session.user.last_name = last_name;
+    req.session.user.username = username;
+    req.session.user.email = email || null;
+
+    const [[profile]] = await db.query(
+      `SELECT first_name, last_name, username, email, position, status FROM users WHERE user_id = ?`,
+      [req.session.user.user_id]
+    );
+    res.render('pharmacist/settings', {
+      user: req.session.user,
+      profile,
+      error: null,
+      success: 'Changes saved successfully.'
+    });
+  } catch (err) {
+    const message = err.code === 'ER_DUP_ENTRY'
+      ? 'That username is already taken.'
+      : 'Could not save changes. Please try again.';
+    console.error('Settings update error:', err);
+    rerender(message, null);
   }
 });
 

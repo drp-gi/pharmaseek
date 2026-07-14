@@ -141,6 +141,26 @@
 }
 .dismiss-warning .ic { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; color: #d97706; }
 
+/* Blocking notice — a medicine at 0 stock can't have its request
+   dismissed, since nothing else would ever re-flag it. Styled louder
+   (solid red tint) than .dismiss-warning since this isn't a soft caution,
+   the action is actually refused. */
+.dismiss-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #7f1d1d;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.dismiss-blocked .ic { width: 19px; height: 19px; flex-shrink: 0; margin-top: 1px; color: #dc2626; }
+.dismiss-blocked__title { font-weight: 800; color: #991b1b; margin-bottom: 4px; }
+.dismiss-blocked p { margin: 0; }
+
 /* Solid red — a real confirmation, not a subtle secondary action */
 .btn-danger {
   display: inline-flex;

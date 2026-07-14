@@ -62,6 +62,22 @@
   font-size: 0.9rem;
 }
 
+/* ── Discontinued view note ───────────────────────────────── */
+.discontinued-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.discontinued-note .ic { width: 15px; height: 15px; color: #9ca3af; }
+
 /* ── Medicine cards grid ──────────────────────────────────── */
 .medicine-grid {
   display: grid;
@@ -108,6 +124,46 @@
   left: 8px;
   z-index: 2;
 }
+.badge--discontinued { background: #e5e7eb; color: #6b7280; }
+
+/* Reactivate button overlaid on a discontinued card's image, top-right */
+.medicine-card__quick-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+.quick-reactivate-form { display: flex; }
+
+/* Discontinued cards: muted image + de-emphasized text, same layout */
+.medicine-card--discontinued { background: #fafbfc; }
+.medicine-card--discontinued .medicine-card__image { filter: grayscale(100%); opacity: 0.65; }
+.medicine-card--discontinued .medicine-card__name,
+.medicine-card--discontinued .medicine-card__brand,
+.medicine-card--discontinued .medicine-card__stock-value,
+.medicine-card--discontinued .medicine-card__price { color: #9ca3af; }
+
+.btn-reactivate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1.5px solid #bbf7d0;
+  background: #dcfce7;
+  color: #15803d;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.btn-reactivate:hover { background: #bbf7d0; box-shadow: 0 3px 10px rgba(21, 128, 61, 0.2); transform: translateY(-1px); }
+.btn-reactivate .ic { width: 13px; height: 13px; }
+
 .medicine-card__body { padding: 16px 18px; }
 .medicine-card__name { font-size: 1rem; font-weight: 700; color: #111827; }
 .medicine-card__brand {
@@ -213,9 +269,9 @@
 
 .detail-actions { display: flex; gap: 12px; margin-top: 24px; }
 .detail-actions .btn-primary { flex: 1; justify-content: center; }
-/* The Delete button sits inside its own <form> (so it can submit
-   independently of Edit). That form must be a flex container itself,
-   or the button inside it won't stretch to match Edit's width. */
+/* Reactivate sits inside its own <form> so it can submit on its own.
+   That form must be a flex container itself, or the button inside it
+   won't stretch to fill .detail-actions the way Edit/Remove do. */
 .detail-actions form { flex: 1; display: flex; }
 .btn-danger-outline {
   flex: 1;
@@ -235,6 +291,36 @@
 }
 .btn-danger-outline:hover { background: #fef2f2; }
 .btn-danger-outline .ic { width: 15px; height: 15px; }
+
+/* ── Remove confirmation modal ────────────────────────────── */
+.modal--sm { max-width: 420px; }
+.confirm-modal__body {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.remove-modal__text {
+  font-size: 0.9rem;
+  color: #374151;
+  line-height: 1.6;
+}
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger:hover { background: #b91c1c; }
 
 /* ── Add/Edit Medicine form ───────────────────────────────── */
 .upload-row {

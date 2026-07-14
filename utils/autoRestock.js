@@ -6,7 +6,11 @@
 //
 // Skips silently if the medicine already has an open (Pending/Approved)
 // request, so repeated sales on an already-flagged medicine don't pile up
-// duplicate requests.
+// duplicate requests. Also skips Discontinued medicines outright — Sale/
+// Disposal only ever offer Active medicines to begin with, but the Dismiss
+// and Confirm Delivery call sites reach this by medicine_id directly, so
+// this guard is what actually keeps a discontinued item from getting
+// auto-restocked through those paths.
 //
 // `queryable` is anything with a mysql2-compatible .query() — either the
 // pool (db) or an in-progress transaction `connection`, so this can run
@@ -14,10 +18,11 @@
 // (Sale/Disposal handlers).
 async function maybeCreateRestockRequest(queryable, { medicineId, userId = null, reason }) {
   const [[medicine]] = await queryable.query(
-    `SELECT stock_quantity, stock_threshold FROM medicines WHERE medicine_id = ?`,
+    `SELECT stock_quantity, stock_threshold, status FROM medicines WHERE medicine_id = ?`,
     [medicineId]
   );
-  if (!medicine || medicine.stock_quantity >= medicine.stock_threshold) return false;
+  if (!medicine || medicine.status !== 'Active') return false;
+  if (medicine.stock_quantity >= medicine.stock_threshold) return false;
 
   const [[existing]] = await queryable.query(
     `SELECT request_id FROM restock_requests

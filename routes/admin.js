@@ -431,4 +431,125 @@ router.get('/management-logs', async (req, res) => {
   }
 });
 
+// ── Settings ─────────────────────────────────────────────────
+
+// GET /admin/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const [[pharmacy]] = await db.query(`SELECT * FROM pharmacy_info WHERE pharmacy_id = 1`);
+    const [[profile]] = await db.query(
+      `SELECT first_name, last_name, email FROM users WHERE user_id = ?`,
+      [req.session.user.user_id]
+    );
+
+    res.render('admin/settings', {
+      user: req.session.user,
+      pharmacy: pharmacy || { pharmacy_name: '', address: '', contact_number: '', email: '' },
+      profile,
+      error: null,
+      success: null
+    });
+  } catch (err) {
+    console.error('Settings load error:', err);
+    res.render('admin/settings', {
+      user: req.session.user,
+      pharmacy: { pharmacy_name: '', address: '', contact_number: '', email: '' },
+      profile: req.session.user,
+      error: 'Could not load settings. Please try again.',
+      success: null
+    });
+  }
+});
+
+// POST /admin/settings — updates pharmacy info, the admin's own profile,
+// and (optionally) their password, all from the page's single Save button.
+router.post('/settings', async (req, res) => {
+  const {
+    pharmacy_name, address, contact_number, pharmacy_email,
+    first_name, last_name, email,
+    current_password, new_password, confirm_password
+  } = req.body;
+
+  const rerender = (error, success) => {
+    res.render('admin/settings', {
+      user: req.session.user,
+      pharmacy: { pharmacy_name, address, contact_number, email: pharmacy_email },
+      profile: { first_name, last_name, email },
+      error,
+      success
+    });
+  };
+
+  if (!pharmacy_name || !first_name || !last_name) {
+    return rerender('Please fill in all required fields.', null);
+  }
+
+  const wantsPasswordChange = current_password || new_password || confirm_password;
+  if (wantsPasswordChange) {
+    if (!current_password || !new_password || !confirm_password) {
+      return rerender('Fill in all three password fields to change your password.', null);
+    }
+    if (new_password !== confirm_password) {
+      return rerender('New password and confirmation do not match.', null);
+    }
+    if (new_password.length < 6) {
+      return rerender('New password must be at least 6 characters.', null);
+    }
+  }
+
+  try {
+    let hashedPassword = null;
+    if (wantsPasswordChange) {
+      const [[dbUser]] = await db.query(
+        `SELECT password FROM users WHERE user_id = ?`,
+        [req.session.user.user_id]
+      );
+      const matches = await bcrypt.compare(current_password, dbUser.password);
+      if (!matches) {
+        return rerender('Current password is incorrect.', null);
+      }
+      hashedPassword = await bcrypt.hash(new_password, 10);
+    }
+
+    await db.query(
+      `INSERT INTO pharmacy_info (pharmacy_id, pharmacy_name, address, contact_number, email)
+       VALUES (1, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         pharmacy_name = VALUES(pharmacy_name),
+         address = VALUES(address),
+         contact_number = VALUES(contact_number),
+         email = VALUES(email)`,
+      [pharmacy_name, address || null, contact_number || null, pharmacy_email || null]
+    );
+
+    if (hashedPassword) {
+      await db.query(
+        `UPDATE users SET first_name = ?, last_name = ?, email = ?, password = ? WHERE user_id = ?`,
+        [first_name, last_name, email || null, hashedPassword, req.session.user.user_id]
+      );
+    } else {
+      await db.query(
+        `UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE user_id = ?`,
+        [first_name, last_name, email || null, req.session.user.user_id]
+      );
+    }
+
+    req.session.user.first_name = first_name;
+    req.session.user.last_name = last_name;
+    req.session.user.email = email || null;
+
+    const [[pharmacy]] = await db.query(`SELECT * FROM pharmacy_info WHERE pharmacy_id = 1`);
+    res.render('admin/settings', {
+      user: req.session.user,
+      pharmacy,
+      profile: { first_name, last_name, email },
+      error: null,
+      success: 'Changes saved successfully.'
+    });
+  } catch (err) {
+    console.error('Settings update error:', err);
+    rerender('Could not save changes. Please try again.', null);
+  }
+});
+
 module.exports = router;

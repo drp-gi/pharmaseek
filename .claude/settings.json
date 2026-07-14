@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/tmp/**)",
+      "Bash(curl -s -b pharm_cookies.txt \"http://localhost:3000/pharmacist/restock-requests?tab=Pending\" -o rr2.html -w \"status:%{http_code}\\\\n\")",
+      "Bash(cp \"/c/Users/yaa/AppData/Local/Temp/claude/c--Users-yaa-pharmaseek/c7259749-aa17-424d-af9d-84f6b2358194/scratchpad/pw_dismiss3.js\" /tmp/pw3/pw_dismiss3.js)",
+      "Bash(node /tmp/pw3/pw_dismiss3.js)"
+    ]
+  }
+}

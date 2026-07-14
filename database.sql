@@ -24,6 +24,18 @@ CREATE TABLE suppliers (
 );
 
 
+-- PHARMACY_INFO
+-- Singleton table (one row, id = 1) holding the pharmacy-wide details
+-- shown on the Admin Settings page.
+CREATE TABLE pharmacy_info (
+    pharmacy_id INT PRIMARY KEY DEFAULT 1,
+    pharmacy_name VARCHAR(100) NOT NULL,
+    address VARCHAR(255),
+    contact_number VARCHAR(20),
+    email VARCHAR(100)
+);
+
+
 -- USERS
 -- Admin, Pharmacist, or Staff. Accounts are created by an Admin only.
 CREATE TABLE users (
@@ -52,6 +64,7 @@ CREATE TABLE medicines (
     stock_threshold INT NOT NULL DEFAULT 50,
     expiration_date DATE,
     image_path VARCHAR(255),
+    status ENUM('Active', 'Discontinued') NOT NULL DEFAULT 'Active',
     category_id INT,
     supplier_id INT,
 
@@ -119,6 +132,11 @@ VALUES
 ('Admin', 'User', 'admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin.user@pharmaseek.com', 'Admin', 'Active'),
 ('Rica', 'Cruz', 'rcruz_ph', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'rica.cruz@pharmaseek.com', 'Pharmacist', 'Active'),
 ('Marco', 'Reyes', 'mreyes_s', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'marco.reyes@pharmaseek.com', 'Staff', 'Active');
+
+
+INSERT INTO pharmacy_info (pharmacy_id, pharmacy_name, address, contact_number, email)
+VALUES
+(1, 'City Center Pharmacy', '123 Health Blvd, Medical District, NY 10001', '+1 (555) 012-3456', 'contact@citycenterpharma.com');
 
 
 INSERT INTO categories (category_name, description)

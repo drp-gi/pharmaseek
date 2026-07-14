@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaSeek — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/settings.css">
+</head>
+<body>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────── -->
+    <%- include('../partials/pharmacist-sidebar', { active: 'settings' }) %>
+
+    <!-- ── MAIN ────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="topbar">
+        <div>
+          <h1>Settings</h1>
+          <p>Manage your account</p>
+        </div>
+        <div class="topbar__actions">
+          <button class="bell" title="Notifications">
+            <i data-lucide="bell" class="ic"></i>
+            <span class="dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <% if (error) { %>
+        <div class="alert alert--error">
+          <i data-lucide="circle-alert" class="ic"></i>
+          <%= error %>
+        </div>
+      <% } %>
+      <% if (success) { %>
+        <div class="alert alert--success">
+          <i data-lucide="circle-check" class="ic"></i>
+          <%= success %>
+        </div>
+      <% } %>
+
+      <form method="POST" action="/pharmacist/settings">
+
+        <section class="panel">
+          <div class="panel__header"><h2>My Profile</h2></div>
+
+          <div class="settings-row">
+            <div class="settings-field">
+              <label for="first_name">First Name</label>
+              <input type="text" id="first_name" name="first_name" value="<%= profile.first_name %>" required>
+            </div>
+            <div class="settings-field">
+              <label for="last_name">Last Name</label>
+              <input type="text" id="last_name" name="last_name" value="<%= profile.last_name %>" required>
+            </div>
+          </div>
+
+          <div class="settings-field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" value="<%= profile.username %>" required>
+          </div>
+
+          <div class="settings-field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="<%= profile.email || '' %>">
+          </div>
+
+          <div class="settings-readonly">
+            <span>Role: <strong><%= profile.position %></strong></span>
+            <span>Status: <strong><%= profile.status %></strong></span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header"><h2>Change Password</h2></div>
+
+          <div class="settings-field">
+            <label for="current_password">Current Password</label>
+            <input type="password" id="current_password" name="current_password" autocomplete="current-password">
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field">
+              <label for="new_password">New Password</label>
+              <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="6">
+            </div>
+            <div class="settings-field">
+              <label for="confirm_password">Confirm New Password</label>
+              <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" minlength="6">
+            </div>
+          </div>
+        </section>
+
+        <button type="submit" class="btn-primary">Save Changes</button>
+      </form>
+
+      <p class="page-footer">
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+      </p>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

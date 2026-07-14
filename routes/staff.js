@@ -1,6 +1,7 @@
 // routes/staff.js
 const express         = require('express');
 const router          = express.Router();
+const bcrypt          = require('bcryptjs');
 const isAuthenticated = require('../middleware/authMiddleware');
 const authorizeRole   = require('../middleware/roleMiddleware');
 const db              = require('../db/connection');
@@ -94,7 +95,9 @@ router.get('/inventory', async (req, res) => {
       `SELECT category_id, category_name FROM categories ORDER BY category_name`
     );
 
-    const clauses = [];
+    // Discontinued medicines are hidden from active inventory — Staff's
+    // catalog is read-only and only ever shows what's still sellable.
+    const clauses = [`m.status = 'Active'`];
     const params = [];
     if (search) {
       clauses.push('m.medicine_name LIKE ?');
@@ -104,7 +107,7 @@ router.get('/inventory', async (req, res) => {
       clauses.push('m.category_id = ?');
       params.push(category);
     }
-    const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const whereClause = `WHERE ${clauses.join(' AND ')}`;
 
     const [medicines] = await db.query(
       `SELECT m.medicine_id, m.medicine_name, m.brand_name, m.medicine_type, m.dose,
@@ -159,8 +162,11 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
   const validTabs = ['sale', 'disposal', 'delivery'];
   const activeTab = validTabs.includes(tab) ? tab : 'sale';
 
+  // Discontinued medicines can't be sold or disposed of, so they're left
+  // out of this picker.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, stock_quantity, unit_price FROM medicines ORDER BY medicine_name`
+    `SELECT medicine_id, medicine_name, stock_quantity, unit_price, image_path
+     FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
   );
 
   let todaysEntries = [];
@@ -343,6 +349,111 @@ router.post('/transactions/delivery-checkin/:id', async (req, res) => {
   }
 
   res.redirect('/staff/transactions?tab=delivery');
+});
+
+// ── Settings ─────────────────────────────────────────────────
+
+// GET /staff/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const [[profile]] = await db.query(
+      `SELECT first_name, last_name, username, email, position, status FROM users WHERE user_id = ?`,
+      [req.session.user.user_id]
+    );
+    res.render('staff/settings', { user: req.session.user, profile, error: null, success: null });
+  } catch (err) {
+    console.error('Settings load error:', err);
+    res.render('staff/settings', {
+      user: req.session.user,
+      profile: req.session.user,
+      error: 'Could not load settings. Please try again.',
+      success: null
+    });
+  }
+});
+
+// POST /staff/settings — updates the staff member's own profile and
+// (optionally) their password, from the page's single Save button.
+router.post('/settings', async (req, res) => {
+  const {
+    first_name, last_name, username, email,
+    current_password, new_password, confirm_password
+  } = req.body;
+
+  const rerender = (error, success, profileOverride) => {
+    res.render('staff/settings', {
+      user: req.session.user,
+      profile: profileOverride || { ...req.session.user, first_name, last_name, username, email },
+      error,
+      success
+    });
+  };
+
+  if (!first_name || !last_name || !username) {
+    return rerender('Please fill in all required fields.', null);
+  }
+
+  const wantsPasswordChange = current_password || new_password || confirm_password;
+  if (wantsPasswordChange) {
+    if (!current_password || !new_password || !confirm_password) {
+      return rerender('Fill in all three password fields to change your password.', null);
+    }
+    if (new_password !== confirm_password) {
+      return rerender('New password and confirmation do not match.', null);
+    }
+    if (new_password.length < 6) {
+      return rerender('New password must be at least 6 characters.', null);
+    }
+  }
+
+  try {
+    let hashedPassword = null;
+    if (wantsPasswordChange) {
+      const [[dbUser]] = await db.query(
+        `SELECT password FROM users WHERE user_id = ?`,
+        [req.session.user.user_id]
+      );
+      const matches = await bcrypt.compare(current_password, dbUser.password);
+      if (!matches) {
+        return rerender('Current password is incorrect.', null);
+      }
+      hashedPassword = await bcrypt.hash(new_password, 10);
+    }
+
+    if (hashedPassword) {
+      await db.query(
+        `UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, password = ? WHERE user_id = ?`,
+        [first_name, last_name, username, email || null, hashedPassword, req.session.user.user_id]
+      );
+    } else {
+      await db.query(
+        `UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ? WHERE user_id = ?`,
+        [first_name, last_name, username, email || null, req.session.user.user_id]
+      );
+    }
+
+    req.session.user.first_name = first_name;
+    req.session.user.last_name = last_name;
+    req.session.user.username = username;
+    req.session.user.email = email || null;
+
+    const [[profile]] = await db.query(
+      `SELECT first_name, last_name, username, email, position, status FROM users WHERE user_id = ?`,
+      [req.session.user.user_id]
+    );
+    res.render('staff/settings', {
+      user: req.session.user,
+      profile,
+      error: null,
+      success: 'Changes saved successfully.'
+    });
+  } catch (err) {
+    const message = err.code === 'ER_DUP_ENTRY'
+      ? 'That username is already taken.'
+      : 'Could not save changes. Please try again.';
+    console.error('Settings update error:', err);
+    rerender(message, null);
+  }
 });
 
 module.exports = router;

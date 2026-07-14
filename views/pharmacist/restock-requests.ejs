@@ -113,7 +113,8 @@
                                     data-form-id="dismiss-form-<%= r.request_id %>"
                                     data-medicine="<%= r.medicine_name %>"
                                     data-quantity="<%= Number(r.quantity_requested).toLocaleString() %> units"
-                                    data-date="<%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %>">
+                                    data-date="<%= new Date(r.request_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %>"
+                                    data-stock="<%= r.stock_quantity %>">
                               <i data-lucide="x" class="ic"></i> Dismiss
                             </button>
                           </form>
@@ -153,13 +154,14 @@
   <div class="modal-overlay" id="dismissOverlay">
     <div class="modal modal--sm">
       <div class="modal__header">
-        <h3>Dismiss this restock request?</h3>
+        <h3 id="dismissTitle">Dismiss this restock request?</h3>
         <button class="modal__close" id="closeDismissModal" type="button">
           <i data-lucide="x" class="ic"></i>
         </button>
       </div>
 
-      <div class="confirm-modal__body">
+      <!-- Shown when the medicine still has some stock left -->
+      <div class="confirm-modal__body" id="dismissBodyNormal">
         <div class="modal-details-box">
           <div class="modal-detail">
             <span class="modal-detail__label">Medicine</span>
@@ -177,12 +179,28 @@
 
         <div class="dismiss-warning">
           <i data-lucide="triangle-alert" class="ic"></i>
-          <span>This medicine will remain flagged if stock stays below its threshold, and a new request may be generated automatically.</span>
+          <span>This request will be cancelled. If stock is still below threshold, it will only be re-flagged automatically the next time a sale, disposal, or delivery affects this medicine.</span>
         </div>
 
         <div class="modal__actions">
           <button type="button" class="btn-outline" id="cancelDismiss">Cancel</button>
           <button type="button" class="btn-danger" id="confirmDismiss">Dismiss Request</button>
+        </div>
+      </div>
+
+      <!-- Shown when the medicine is completely out of stock — dismissing
+           is blocked outright, since nothing else would ever re-flag it. -->
+      <div class="confirm-modal__body" id="dismissBodyBlocked" style="display:none;">
+        <div class="dismiss-blocked">
+          <i data-lucide="octagon-alert" class="ic"></i>
+          <div>
+            <div class="dismiss-blocked__title">Can't Dismiss — Out of Stock</div>
+            <p><strong id="dismissBlockedMedicine"></strong> is completely out of stock. This request will stay open until it's restocked or the medicine is marked as discontinued.</p>
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-primary" id="acknowledgeDismissBlocked">Got It</button>
         </div>
       </div>
     </div>

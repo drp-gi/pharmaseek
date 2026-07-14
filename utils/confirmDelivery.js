@@ -8,6 +8,8 @@
 // received* quantity (not necessarily what was originally requested) to
 // the medicine's stock, and logs a matching stock_transactions row —
 // all inside one DB transaction.
+const { maybeCreateRestockRequest } = require('./autoRestock');
+
 async function confirmDelivery(db, { requestId, quantityReceived, notes, userId }) {
   let connection;
   try {
@@ -39,6 +41,15 @@ async function confirmDelivery(db, { requestId, quantityReceived, notes, userId 
        VALUES ('restock', ?, ?, ?, ?, ?)`,
       [quantityReceived, notes || null, requestId, request.medicine_id, userId]
     );
+
+    // A partial delivery can still leave stock below threshold — re-run the
+    // check so a fresh Pending request pops back up immediately instead of
+    // waiting on the next unrelated sale/disposal to notice.
+    await maybeCreateRestockRequest(connection, {
+      medicineId: request.medicine_id,
+      userId,
+      reason: 'Auto-generated: still below threshold after this delivery.'
+    });
 
     await connection.commit();
     return { ok: true };

@@ -16,21 +16,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   // ── Dismiss confirmation modal ───────────────────────────
-  const dismissOverlay    = document.getElementById('dismissOverlay');
-  const dismissMedicine   = document.getElementById('dismissMedicine');
-  const dismissQuantity   = document.getElementById('dismissQuantity');
-  const dismissDate       = document.getElementById('dismissDate');
-  const confirmDismissBtn = document.getElementById('confirmDismiss');
-  const cancelDismissBtn  = document.getElementById('cancelDismiss');
-  const closeDismissBtn   = document.getElementById('closeDismissModal');
+  const dismissOverlay          = document.getElementById('dismissOverlay');
+  const dismissTitle            = document.getElementById('dismissTitle');
+  const dismissBodyNormal       = document.getElementById('dismissBodyNormal');
+  const dismissBodyBlocked      = document.getElementById('dismissBodyBlocked');
+  const dismissMedicine         = document.getElementById('dismissMedicine');
+  const dismissQuantity         = document.getElementById('dismissQuantity');
+  const dismissDate             = document.getElementById('dismissDate');
+  const dismissBlockedMedicine  = document.getElementById('dismissBlockedMedicine');
+  const confirmDismissBtn       = document.getElementById('confirmDismiss');
+  const cancelDismissBtn        = document.getElementById('cancelDismiss');
+  const closeDismissBtn         = document.getElementById('closeDismissModal');
+  const acknowledgeBlockedBtn   = document.getElementById('acknowledgeDismissBlocked');
 
   let targetDismissFormId = null;
 
   function openDismissModal(trigger) {
-    dismissMedicine.textContent = trigger.dataset.medicine;
-    dismissQuantity.textContent = trigger.dataset.quantity;
-    dismissDate.textContent = trigger.dataset.date;
-    targetDismissFormId = trigger.dataset.formId;
+    const outOfStock = Number(trigger.dataset.stock) === 0;
+
+    if (outOfStock) {
+      dismissTitle.textContent = "Can't Dismiss This Request";
+      dismissBlockedMedicine.textContent = trigger.dataset.medicine;
+      dismissBodyNormal.style.display = 'none';
+      dismissBodyBlocked.style.display = '';
+      targetDismissFormId = null;
+    } else {
+      dismissTitle.textContent = 'Dismiss this restock request?';
+      dismissMedicine.textContent = trigger.dataset.medicine;
+      dismissQuantity.textContent = trigger.dataset.quantity;
+      dismissDate.textContent = trigger.dataset.date;
+      dismissBodyNormal.style.display = '';
+      dismissBodyBlocked.style.display = 'none';
+      targetDismissFormId = trigger.dataset.formId;
+    }
+
     dismissOverlay.classList.add('is-open');
   }
   function closeDismissModal() {
@@ -50,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (cancelDismissBtn) cancelDismissBtn.addEventListener('click', closeDismissModal);
   if (closeDismissBtn) closeDismissBtn.addEventListener('click', closeDismissModal);
+  if (acknowledgeBlockedBtn) acknowledgeBlockedBtn.addEventListener('click', closeDismissModal);
   if (dismissOverlay) {
     dismissOverlay.addEventListener('click', (e) => {
       if (e.target === dismissOverlay) closeDismissModal();

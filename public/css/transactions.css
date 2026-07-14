@@ -9,6 +9,33 @@
   gap: 16px;
 }
 
+/* ── Medicine picture preview beside the medicine select ─── */
+.medicine-select-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.medicine-select-row select { flex: 1; }
+.medicine-select-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: #eef1f5;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c3cad6;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.medicine-select-thumb .ic { width: 16px; height: 16px; }
+.medicine-select-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* ── Today's Sales / Disposals list ──────────────────────── */
 .tx-list__row {
   display: flex;

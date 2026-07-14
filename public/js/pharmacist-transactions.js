@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openConfirmDeliveryModal(trigger) {
       confirmDeliveryTitle.textContent = 'Confirm Delivery — ' + trigger.dataset.medicine;
       confirmDeliveryRequestedQty.textContent = trigger.dataset.requestedQty;
-      confirmDeliveryForm.action = '/staff/transactions/delivery-checkin/' + trigger.dataset.requestId;
+      confirmDeliveryForm.action = '/pharmacist/transactions/checkin/' + trigger.dataset.requestId;
       quantityReceivedInput.value = '';
       deliveryNotesInput.value = '';
       confirmDeliveryOverlay.classList.add('is-open');

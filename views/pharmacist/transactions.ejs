@@ -17,7 +17,7 @@
   <div class="layout">
 
     <!-- ── SIDEBAR ─────────────────────────────────── -->
-    <%- include('../partials/staff-sidebar', { active: 'transactions' }) %>
+    <%- include('../partials/pharmacist-sidebar', { active: 'transactions' }) %>
 
     <!-- ── MAIN ────────────────────────────────────── -->
     <main class="main">
@@ -46,16 +46,16 @@
 
       <!-- ── TABS ─────────────────────────────────────── -->
       <div class="report-tabs">
-        <a href="/staff/transactions?tab=sale" class="report-tab <%= tab === 'sale' ? 'active' : '' %>">Sale</a>
-        <a href="/staff/transactions?tab=disposal" class="report-tab <%= tab === 'disposal' ? 'active' : '' %>">Disposal</a>
-        <a href="/staff/transactions?tab=delivery" class="report-tab <%= tab === 'delivery' ? 'active' : '' %>">Delivery Check-in</a>
+        <a href="/pharmacist/transactions?tab=sale" class="report-tab <%= tab === 'sale' ? 'active' : '' %>">Sale</a>
+        <a href="/pharmacist/transactions?tab=disposal" class="report-tab <%= tab === 'disposal' ? 'active' : '' %>">Disposal</a>
+        <a href="/pharmacist/transactions?tab=delivery" class="report-tab <%= tab === 'delivery' ? 'active' : '' %>">Delivery Check-in</a>
       </div>
 
       <% if (tab === 'sale') { %>
         <!-- ── RECORD NEW SALE ──────────────────────────── -->
         <section class="panel">
           <div class="panel__header"><h2>Record New Sale</h2></div>
-          <form action="/staff/transactions/sale" method="POST" class="filter-row">
+          <form action="/pharmacist/transactions/sale" method="POST" class="filter-row">
             <div class="filter-field">
               <label for="sale_medicine_id">Select Medicine</label>
               <div class="medicine-select-row">
@@ -107,7 +107,7 @@
         <!-- ── RECORD NEW DISPOSAL ──────────────────────── -->
         <section class="panel">
           <div class="panel__header"><h2>Record New Disposal</h2></div>
-          <form action="/staff/transactions/disposal" method="POST" class="transaction-form">
+          <form action="/pharmacist/transactions/disposal" method="POST" class="transaction-form">
             <div class="filter-row">
               <div class="filter-field">
                 <label for="disposal_medicine_id">Select Medicine</label>
@@ -247,6 +247,6 @@
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script>lucide.createIcons();</script>
-  <script src="/js/staff-transactions.js"></script>
+  <script src="/js/pharmacist-transactions.js"></script>
 </body>
 </html>

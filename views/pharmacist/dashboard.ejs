@@ -188,10 +188,19 @@
                           <input type="hidden" name="return_to" value="/pharmacist/dashboard">
                           <button type="submit" class="btn-approve"><i data-lucide="check" class="ic"></i> Approve</button>
                         </form>
-                        <form action="/pharmacist/restock-requests/<%= r.request_id %>/dismiss" method="POST" onsubmit="return confirm('Dismiss this restock request?');">
-                          <input type="hidden" name="return_to" value="/pharmacist/dashboard">
-                          <button type="submit" class="btn-dismiss"><i data-lucide="x" class="ic"></i> Dismiss</button>
-                        </form>
+                        <% if (Number(r.stock_quantity) === 0) { %>
+                          <% const blockedMsg = "Can't dismiss this request — " + r.medicine_name + " is completely out of stock. It will stay open until it's restocked or the medicine is marked as discontinued."; %>
+                          <form action="/pharmacist/restock-requests/<%= r.request_id %>/dismiss" method="POST"
+                                onsubmit="alert(<%= JSON.stringify(blockedMsg) %>); return false;">
+                            <input type="hidden" name="return_to" value="/pharmacist/dashboard">
+                            <button type="submit" class="btn-dismiss"><i data-lucide="x" class="ic"></i> Dismiss</button>
+                          </form>
+                        <% } else { %>
+                          <form action="/pharmacist/restock-requests/<%= r.request_id %>/dismiss" method="POST" onsubmit="return confirm('Dismiss this restock request?');">
+                            <input type="hidden" name="return_to" value="/pharmacist/dashboard">
+                            <button type="submit" class="btn-dismiss"><i data-lucide="x" class="ic"></i> Dismiss</button>
+                          </form>
+                        <% } %>
                       </div>
                     </td>
                   </tr>

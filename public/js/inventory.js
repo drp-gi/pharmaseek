@@ -5,34 +5,57 @@ document.addEventListener('DOMContentLoaded', () => {
   const items           = Array.from(document.querySelectorAll('.medicine-item'));
   const groupEls         = Array.from(document.querySelectorAll('[data-category-group]'));
 
+  const discontinuedNote = document.getElementById('discontinuedNote');
+
   function applyFilters() {
     const query = (searchBox.value || '').trim().toLowerCase();
     const category = categoryFilter.value;
+    const viewingDiscontinued = category === 'Discontinued';
+
+    if (discontinuedNote) discontinuedNote.style.display = viewingDiscontinued ? '' : 'none';
 
     items.forEach((item) => {
-      const matchesQuery    = !query || item.dataset.name.includes(query);
-      const matchesCategory = category === 'All' || item.dataset.categoryId === category;
-      item.style.display = (matchesQuery && matchesCategory) ? '' : 'none';
+      const matchesQuery  = !query || item.dataset.name.includes(query);
+      const isDiscontinued = item.dataset.status === 'Discontinued';
+
+      let visible;
+      if (viewingDiscontinued) {
+        visible = matchesQuery && isDiscontinued;
+      } else {
+        const matchesCategory = category === 'All' || item.dataset.categoryId === category;
+        visible = matchesQuery && matchesCategory && !isDiscontinued;
+      }
+      item.style.display = visible ? '' : 'none';
     });
 
     groupEls.forEach((group) => {
       const groupItems = Array.from(group.querySelectorAll('.medicine-item'));
-      const hasVisible = groupItems.some((item) => item.style.display !== 'none');
-      group.style.display = hasVisible ? '' : 'none';
+      const visibleCount = groupItems.filter((item) => item.style.display !== 'none').length;
+      group.style.display = visibleCount > 0 ? '' : 'none';
+
+      const badge = group.querySelector('.count-badge');
+      if (badge) badge.textContent = visibleCount;
     });
   }
 
   if (searchBox) searchBox.addEventListener('input', applyFilters);
   if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
 
+  // Establishes the default Active-only view on load (the grid otherwise
+  // starts with Discontinued items mixed in, since both are server-rendered
+  // together so the dropdown can toggle between them without a reload).
+  applyFilters();
+
   // ── Modal open/close helpers ─────────────────────────────
   const detailOverlay = document.getElementById('detailOverlay');
   const formOverlay    = document.getElementById('medicineFormOverlay');
+  const removeOverlay  = document.getElementById('removeOverlay');
 
   const openDetail  = () => detailOverlay.classList.add('is-open');
   const closeDetail = () => detailOverlay.classList.remove('is-open');
   const openForm     = () => formOverlay.classList.add('is-open');
   const closeForm    = () => formOverlay.classList.remove('is-open');
+  const closeRemoveModal = () => removeOverlay.classList.remove('is-open');
 
   document.getElementById('closeDetail').addEventListener('click', closeDetail);
   detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) closeDetail(); });
@@ -41,11 +64,34 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cancelMedicineForm').addEventListener('click', closeForm);
   formOverlay.addEventListener('click', (e) => { if (e.target === formOverlay) closeForm(); });
 
+  document.getElementById('closeRemoveModal').addEventListener('click', closeRemoveModal);
+  document.getElementById('cancelRemove').addEventListener('click', closeRemoveModal);
+  removeOverlay.addEventListener('click', (e) => { if (e.target === removeOverlay) closeRemoveModal(); });
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     closeDetail();
     closeForm();
+    closeRemoveModal();
   });
+
+  // The Reactivate button sits on top of a discontinued card that itself
+  // opens the detail modal on click — stop that click from bubbling up to
+  // the card so it doesn't also pop the detail modal open.
+  document.querySelectorAll('.medicine-card__quick-actions').forEach((el) => {
+    el.addEventListener('click', (e) => e.stopPropagation());
+  });
+
+  // ── Remove confirmation modal ─────────────────────────────
+  const removeModalText = document.getElementById('removeModalText');
+  const removeForm      = document.getElementById('removeForm');
+
+  function openRemoveModal(id, name) {
+    removeModalText.textContent = 'Remove "' + name + '" from the catalog? It will be hidden from active ' +
+      'inventory but its transaction history will be preserved, and it can be reactivated later.';
+    removeForm.action = '/pharmacist/inventory/' + id + '/discontinue';
+    removeOverlay.classList.add('is-open');
+  }
 
   // ── Detail modal population ──────────────────────────────
   const money = (v) => '₱' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -96,7 +142,10 @@ document.addEventListener('DOMContentLoaded', () => {
       supplierBlock.style.display = 'none';
     }
 
-    document.getElementById('deleteForm').action = '/pharmacist/inventory/' + d.id + '/delete';
+    const isDiscontinued = d.status === 'Discontinued';
+    document.getElementById('detailActionsActive').style.display = isDiscontinued ? 'none' : '';
+    document.getElementById('detailActionsDiscontinued').style.display = isDiscontinued ? '' : 'none';
+    document.getElementById('reactivateForm').action = '/pharmacist/inventory/' + d.id + '/reactivate';
 
     const detailImage = document.getElementById('detailImage');
     const detailImageIcon = document.getElementById('detailImageIcon');
@@ -116,14 +165,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   items.forEach((card) => {
     card.addEventListener('click', () => openDetailFor(card));
+    card.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      openDetailFor(card);
+    });
   });
 
-  // ── Delete confirmation ──────────────────────────────────
-  document.getElementById('deleteForm').addEventListener('submit', (e) => {
-    const name = document.getElementById('detailName').textContent;
-    if (!confirm('Delete "' + name + '"? This cannot be undone.')) {
-      e.preventDefault();
-    }
+  document.getElementById('detailRemoveBtn').addEventListener('click', () => {
+    const card = items.find((item) => item.dataset.id === activeMedicineId);
+    if (!card) return;
+    closeDetail();
+    openRemoveModal(activeMedicineId, card.dataset.medicineName);
   });
 
   // ── Add / Edit Medicine form ─────────────────────────────
