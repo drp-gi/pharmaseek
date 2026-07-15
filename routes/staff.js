@@ -67,7 +67,7 @@ router.get('/dashboard', async (req, res) => {
 
     const [recentTransactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
-              m.medicine_name, u.first_name, u.last_name
+              m.medicine_name, m.stock_quantity, u.first_name, u.last_name
        FROM stock_transactions st
        JOIN medicines m ON st.medicine_id = m.medicine_id
        JOIN users u ON st.user_id = u.user_id
@@ -199,7 +199,7 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
   } else if (activeTab === 'history') {
     [allTransactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
-              m.medicine_name, u.first_name, u.last_name
+              m.medicine_name, m.stock_quantity, u.first_name, u.last_name
        FROM stock_transactions st
        JOIN medicines m ON st.medicine_id = m.medicine_id
        JOIN users u ON st.user_id = u.user_id

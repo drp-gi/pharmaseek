@@ -71,6 +71,7 @@
             <label for="to">To</label>
             <input type="date" id="to" name="to" value="<%= to %>">
           </div>
+          <div class="filter-row__spacer"></div>
           <% if (tab === 'stock') { %>
             <div class="filter-field">
               <label for="type">Type</label>
@@ -82,7 +83,6 @@
               </select>
             </div>
           <% } %>
-          <div class="filter-row__spacer"></div>
           <button type="submit" class="btn-primary">
             <i data-lucide="filter" class="ic"></i> Filter
           </button>
@@ -96,13 +96,15 @@
                   <th>Date</th>
                   <th>Medicine</th>
                   <th>Type</th>
-                  <th>Quantity</th>
+                  <th>Quantity Added</th>
+                  <th>Quantity Removed</th>
+                  <th>Remaining Stock</th>
                   <th>Staff</th>
                 </tr>
               </thead>
               <tbody>
                 <% if (rows.length === 0) { %>
-                  <tr class="empty-row"><td colspan="5">No stock movement records in this range.</td></tr>
+                  <tr class="empty-row"><td colspan="7">No stock movement records in this range.</td></tr>
                 <% } else { %>
                   <% rows.forEach(function(r) { %>
                     <% const isRestock = r.transaction_type === 'restock'; %>
@@ -111,7 +113,9 @@
                       <td><%= new Date(r.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
                       <td class="medicine-name"><%= r.medicine_name %></td>
                       <td><span class="badge badge--<%= r.transaction_type %>"><%= r.transaction_type.charAt(0).toUpperCase() + r.transaction_type.slice(1) %></span></td>
-                      <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>"><%= isRestock ? '+' : '-' %><%= r.transaction_quantity %> units</td>
+                      <td class="qty-pos"><%= isRestock ? r.transaction_quantity : 0 %></td>
+                      <td class="qty-neg"><%= isRestock ? 0 : r.transaction_quantity %></td>
+                      <td><%= r.stock_quantity %></td>
                       <td>
                         <div class="tx-user">
                           <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %><%= r.last_name[0] %></div>
@@ -242,7 +246,7 @@
       </section>
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System. IM2.
       </p>
 
     </main>

@@ -252,13 +252,15 @@
                   <th>Date</th>
                   <th>Medicine Name</th>
                   <th>Type</th>
-                  <th>Quantity</th>
+                  <th>Quantity Added</th>
+                  <th>Quantity Removed</th>
+                  <th>Remaining Stock</th>
                   <th>Recorded By</th>
                 </tr>
               </thead>
               <tbody>
                 <% if (allTransactions.length === 0) { %>
-                  <tr class="empty-row"><td colspan="5">No transactions recorded yet.</td></tr>
+                  <tr class="empty-row"><td colspan="7">No transactions recorded yet.</td></tr>
                 <% } else { %>
                   <% allTransactions.forEach(function(tx) { %>
                     <% const isRestock = tx.transaction_type === 'restock'; %>
@@ -270,9 +272,9 @@
                       <td>
                         <span class="badge badge--<%= tx.transaction_type %>"><%= tx.transaction_type.toUpperCase() %></span>
                       </td>
-                      <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>">
-                        <%= isRestock ? '+' : '-' %><%= tx.transaction_quantity %> Units
-                      </td>
+                      <td class="qty-pos"><%= isRestock ? tx.transaction_quantity : 0 %></td>
+                      <td class="qty-neg"><%= isRestock ? 0 : tx.transaction_quantity %></td>
+                      <td><%= tx.stock_quantity %></td>
                       <td>
                         <div class="tx-user">
                           <div class="avatar avatar--<%= colorIndex %>"><%= initials %></div>

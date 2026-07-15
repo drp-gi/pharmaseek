@@ -25,10 +25,6 @@
           <p>Overview of system activity and inventory health</p>
         </div>
         <div class="topbar__actions">
-          <div class="search">
-            <i data-lucide="search" class="ic"></i>
-            <input type="text" placeholder="Search data...">
-          </div>
           <button class="bell" title="Notifications">
             <i data-lucide="bell" class="ic"></i>
             <span class="dot"></span>
@@ -70,14 +66,16 @@
                 <th>Date</th>
                 <th>Medicine Name</th>
                 <th>Type</th>
-                <th>Quantity</th>
+                <th>Quantity Added</th>
+                <th>Quantity Removed</th>
+                <th>Remaining Stock</th>
                 <th>Recorded By</th>
               </tr>
             </thead>
             <tbody>
               <% if (transactions.length === 0) { %>
                 <tr class="empty-row">
-                  <td colspan="5">No transactions recorded yet.</td>
+                  <td colspan="7">No transactions recorded yet.</td>
                 </tr>
               <% } else { %>
                 <% transactions.forEach(function(tx, i) { %>
@@ -90,9 +88,9 @@
                     <td>
                       <span class="badge badge--<%= tx.transaction_type %>"><%= tx.transaction_type.toUpperCase() %></span>
                     </td>
-                    <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>">
-                      <%= isRestock ? '+' : '-' %><%= tx.transaction_quantity %> Units
-                    </td>
+                    <td class="qty-pos"><%= isRestock ? tx.transaction_quantity : 0 %></td>
+                    <td class="qty-neg"><%= isRestock ? 0 : tx.transaction_quantity %></td>
+                    <td><%= tx.stock_quantity %></td>
                     <td>
                       <div class="tx-user">
                         <div class="avatar avatar--<%= colorIndex %>"><%= initials %></div>

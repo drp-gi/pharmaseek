@@ -33,7 +33,7 @@ router.get('/dashboard', async (req, res) => {
 
     const [transactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
-              m.medicine_name,
+              m.medicine_name, m.stock_quantity,
               u.first_name, u.last_name
        FROM stock_transactions st
        JOIN medicines m ON st.medicine_id = m.medicine_id
@@ -234,7 +234,7 @@ router.get('/reports', async (req, res) => {
 
       [rows] = await db.query(
         `SELECT st.transaction_id, st.transaction_date, st.transaction_type, st.transaction_quantity,
-                m.medicine_name, u.first_name, u.last_name
+                m.medicine_name, m.stock_quantity, u.first_name, u.last_name
          FROM stock_transactions st
          JOIN medicines m ON st.medicine_id = m.medicine_id
          JOIN users u ON st.user_id = u.user_id
@@ -581,6 +581,26 @@ router.get('/notifications', async (req, res) => {
       `SELECT COUNT(*) AS pendingRestocks FROM restock_requests WHERE status = 'Pending'`
     );
 
+    // Real timestamped events go first so the newest activity is always on
+    // top; the live status alerts below have no event time of their own
+    // (they're just "currently true"), so they're appended after.
+    const [recentLogs] = await db.query(
+      `SELECT ml.findings, ml.date_logged, u.first_name, u.last_name
+       FROM management_logs ml
+       LEFT JOIN users u ON ml.user_id = u.user_id
+       ORDER BY ml.date_logged DESC, ml.log_id DESC
+       LIMIT 3`
+    );
+    recentLogs.forEach((log) => {
+      notifications.push({
+        icon: 'clipboard-list', type: 'info',
+        title: log.findings.length > 70 ? log.findings.slice(0, 70).trim() + '…' : log.findings,
+        subtitle: `Filed by ${log.first_name ? log.first_name + ' ' + log.last_name : 'Unknown'}`,
+        time: log.date_logged,
+        link: '/admin/management-logs'
+      });
+    });
+
     if (outOfStock > 0) {
       notifications.push({
         icon: 'circle-alert', type: 'danger',
@@ -609,23 +629,6 @@ router.get('/notifications', async (req, res) => {
         link: '/admin/reports?tab=restock'
       });
     }
-
-    const [recentLogs] = await db.query(
-      `SELECT ml.findings, ml.date_logged, u.first_name, u.last_name
-       FROM management_logs ml
-       LEFT JOIN users u ON ml.user_id = u.user_id
-       ORDER BY ml.date_logged DESC
-       LIMIT 3`
-    );
-    recentLogs.forEach((log) => {
-      notifications.push({
-        icon: 'clipboard-list', type: 'info',
-        title: log.findings.length > 70 ? log.findings.slice(0, 70).trim() + '…' : log.findings,
-        subtitle: `Filed by ${log.first_name ? log.first_name + ' ' + log.last_name : 'Unknown'}`,
-        time: log.date_logged,
-        link: '/admin/management-logs'
-      });
-    });
 
     res.json({ notifications });
   } catch (err) {

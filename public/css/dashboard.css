@@ -314,11 +314,10 @@ html, body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: #ffffff;
+  color: #DE1A58;
 }
 .notif-item__icon .ic { width: 16px; height: 16px; }
-.notif-item--danger .notif-item__icon  { background: #ffffff; color: #dc2626; }
-.notif-item--warning .notif-item__icon { background: #ffffff; color: #DE1A58; }
-.notif-item--info .notif-item__icon    { background: #dbeafe; color: #1d6ed8; }
 .notif-item__body { flex: 1; min-width: 0; }
 .notif-item__title {
   font-size: 0.85rem;
