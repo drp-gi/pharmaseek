@@ -18,7 +18,11 @@
 // (Sale/Disposal handlers).
 async function maybeCreateRestockRequest(queryable, { medicineId, userId = null, reason }) {
   const [[medicine]] = await queryable.query(
-    `SELECT stock_quantity, stock_threshold, status FROM medicines WHERE medicine_id = ?`,
+    `SELECT m.stock_threshold, m.status, COALESCE(SUM(mb.quantity_on_hand), 0) AS stock_quantity
+     FROM medicines m
+     LEFT JOIN medicine_batches mb ON mb.medicine_id = m.medicine_id AND mb.quantity_on_hand > 0
+     WHERE m.medicine_id = ?
+     GROUP BY m.medicine_id`,
     [medicineId]
   );
   if (!medicine || medicine.status !== 'Active') return false;

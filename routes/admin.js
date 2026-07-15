@@ -33,10 +33,11 @@ router.get('/dashboard', async (req, res) => {
 
     const [transactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
-              m.medicine_name, m.stock_quantity,
+              m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity,
               u.first_name, u.last_name
        FROM stock_transactions st
        JOIN medicines m ON st.medicine_id = m.medicine_id
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        JOIN users u ON st.user_id = u.user_id
        ORDER BY st.transaction_date DESC
        LIMIT 10`
@@ -234,9 +235,10 @@ router.get('/reports', async (req, res) => {
 
       [rows] = await db.query(
         `SELECT st.transaction_id, st.transaction_date, st.transaction_type, st.transaction_quantity,
-                m.medicine_name, m.stock_quantity, u.first_name, u.last_name
+                m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity, u.first_name, u.last_name
          FROM stock_transactions st
          JOIN medicines m ON st.medicine_id = m.medicine_id
+         LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
          JOIN users u ON st.user_id = u.user_id
          WHERE st.transaction_date BETWEEN ? AND ? ${typeClause}
          ORDER BY st.transaction_date DESC
@@ -246,17 +248,20 @@ router.get('/reports', async (req, res) => {
 
     } else if (tab === 'expiration') {
       const [[{ count }]] = await db.query(
-        `SELECT COUNT(*) AS count FROM medicines
-         WHERE expiration_date IS NOT NULL AND expiration_date BETWEEN ? AND ?`,
+        `SELECT COUNT(*) AS count
+         FROM medicines m
+         JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+         WHERE ms.nearest_expiration_date IS NOT NULL AND ms.nearest_expiration_date BETWEEN ? AND ?`,
         [from, to]
       );
       totalCount = count;
 
       [rows] = await db.query(
-        `SELECT medicine_id, medicine_name, stock_quantity, expiration_date
-         FROM medicines
-         WHERE expiration_date IS NOT NULL AND expiration_date BETWEEN ? AND ?
-         ORDER BY expiration_date ASC
+        `SELECT m.medicine_id, m.medicine_name, ms.stock_quantity, ms.nearest_expiration_date AS expiration_date
+         FROM medicines m
+         JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+         WHERE ms.nearest_expiration_date IS NOT NULL AND ms.nearest_expiration_date BETWEEN ? AND ?
+         ORDER BY ms.nearest_expiration_date ASC
          LIMIT ${REPORT_LIMIT}`,
         [from, to]
       );
@@ -566,16 +571,21 @@ router.get('/notifications', async (req, res) => {
     const notifications = [];
 
     const [[{ outOfStock }]] = await db.query(
-      `SELECT COUNT(*) AS outOfStock FROM medicines WHERE stock_quantity = 0 AND status = 'Active'`
+      `SELECT COUNT(*) AS outOfStock FROM medicines m
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE ms.medicine_id IS NULL AND m.status = 'Active'`
     );
     const [[{ lowStock }]] = await db.query(
-      `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity > 0 AND stock_quantity < stock_threshold AND status = 'Active'`
+      `SELECT COUNT(*) AS lowStock FROM medicines m
+       JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE ms.stock_quantity < m.stock_threshold AND m.status = 'Active'`
     );
     const [[{ expiringSoon }]] = await db.query(
-      `SELECT COUNT(*) AS expiringSoon FROM medicines
-       WHERE expiration_date IS NOT NULL
-         AND expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-         AND status = 'Active'`
+      `SELECT COUNT(*) AS expiringSoon FROM medicines m
+       JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE ms.nearest_expiration_date IS NOT NULL
+         AND ms.nearest_expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         AND m.status = 'Active'`
     );
     const [[{ pendingRestocks }]] = await db.query(
       `SELECT COUNT(*) AS pendingRestocks FROM restock_requests WHERE status = 'Pending'`

@@ -103,7 +103,8 @@
                         data-supplier-phone="<%= m.supplier_phone || '' %>"
                         data-image-path="<%= m.image_path || '' %>"
                         data-status-class="<%= m.statusBadge ? m.statusBadge.cls : '' %>"
-                        data-status-label="<%= m.statusBadge ? m.statusBadge.label : '' %>">
+                        data-status-label="<%= m.statusBadge ? m.statusBadge.label : '' %>"
+                        data-batches="<%= JSON.stringify(m.batches || []) %>">
                   <div class="medicine-card__image">
                     <% if (isDiscontinued) { %>
                       <span class="medicine-card__badge"><span class="badge badge--discontinued">Discontinued</span></span>
@@ -281,8 +282,8 @@
             <label for="unit_price">Unit Price (₱)</label>
             <input type="number" id="unit_price" name="unit_price" placeholder="0.00" step="0.01" min="0" required>
           </div>
-          <div class="field">
-            <label for="stock_quantity">Stock Quantity</label>
+          <div class="field" id="stockQuantityField">
+            <label for="stock_quantity">Stock Quantity (first delivery)</label>
             <input type="number" id="stock_quantity" name="stock_quantity" placeholder="0" min="0" required>
           </div>
         </div>
@@ -293,9 +294,18 @@
           <p class="field__hint">Alert triggers when stock falls to or below this number</p>
         </div>
 
-        <div class="field">
-          <label for="expiration_date">Expiration Date</label>
+        <div class="field" id="expirationDateField">
+          <label for="expiration_date">Expiration Date (first delivery)</label>
           <input type="date" id="expiration_date" name="expiration_date">
+        </div>
+
+        <!-- Edit mode only: stock/expiry are read-only here since a medicine
+             can have multiple batches — they're managed via Delivery, Sale,
+             and Disposal on the Transactions page instead. -->
+        <div class="field" id="batchSummaryField" style="display:none;">
+          <label>Stock on Hand</label>
+          <p class="field__hint" id="batchSummaryTotal"></p>
+          <div class="batch-summary-table" id="batchSummaryTable"></div>
         </div>
 
         <div class="form-row">

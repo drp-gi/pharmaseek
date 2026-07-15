@@ -1,3 +1,9 @@
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // ── Search + category filter (client-side, live) ────────
   const searchBox      = document.getElementById('medicineSearch');
@@ -236,11 +242,31 @@ document.addEventListener('DOMContentLoaded', () => {
     setImagePreview(null);
   }
 
+  const stockQuantityField   = document.getElementById('stockQuantityField');
+  const expirationDateField  = document.getElementById('expirationDateField');
+  const batchSummaryField    = document.getElementById('batchSummaryField');
+  const batchSummaryTotal    = document.getElementById('batchSummaryTotal');
+  const batchSummaryTable    = document.getElementById('batchSummaryTable');
+  const stockQuantityInput   = document.getElementById('stock_quantity');
+  const expirationDateInput  = document.getElementById('expiration_date');
+
+  function formatDateShort(iso) {
+    if (!iso) return 'No expiration date';
+    const d = new Date(iso.slice(0, 10) + 'T00:00:00Z');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
+  }
+
   function openAddForm() {
     resetFormFields();
     medicineForm.action = '/pharmacist/inventory';
     formTitle.textContent = 'Add New Medicine';
     formSubmitBtn.textContent = 'Save Medicine';
+
+    stockQuantityField.style.display = '';
+    expirationDateField.style.display = '';
+    batchSummaryField.style.display = 'none';
+    stockQuantityInput.required = true;
+
     openForm();
   }
 
@@ -257,11 +283,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dose').value = d.dose;
     document.getElementById('description').value = d.description;
     document.getElementById('unit_price').value = d.unitPrice;
-    document.getElementById('stock_quantity').value = d.stockQuantity;
     document.getElementById('stock_threshold').value = d.stockThreshold;
-    document.getElementById('expiration_date').value = d.expirationDate;
     document.getElementById('category_id').value = d.categoryId;
     document.getElementById('supplier_id').value = d.supplierId;
+
+    // Stock/expiry are no longer directly editable — a medicine can have
+    // multiple batches, so this is a read-only summary instead. Delivery,
+    // Sale, and Disposal (Transactions page) are what actually move stock.
+    stockQuantityField.style.display = 'none';
+    expirationDateField.style.display = 'none';
+    stockQuantityInput.required = false;
+    stockQuantityInput.value = '';
+    expirationDateInput.value = '';
+
+    const batches = JSON.parse(d.batches || '[]');
+    batchSummaryField.style.display = '';
+    const totalUnits = batches.reduce((sum, b) => sum + Number(b.quantity_on_hand), 0);
+    batchSummaryTotal.textContent = totalUnits.toLocaleString() + ' unit' + (totalUnits === 1 ? '' : 's') +
+      ' across ' + batches.length + ' batch' + (batches.length === 1 ? '' : 'es');
+    batchSummaryTable.innerHTML = batches.length === 0
+      ? '<p class="batch-summary-empty">No stock on hand.</p>'
+      : batches.map((b) => `
+          <div class="batch-summary-row">
+            <span>${b.lot_number ? escapeHtml(b.lot_number) : 'Lot #' + b.batch_id}</span>
+            <span>${Number(b.quantity_on_hand).toLocaleString()} units</span>
+            <span>${formatDateShort(b.expiration_date)}</span>
+          </div>`).join('');
 
     if (d.imagePath) {
       existingImagePathInput.value = d.imagePath;

@@ -20,7 +20,9 @@
       "Bash(node /tmp/pwtest/test_race.js)",
       "Bash(node --check c:/Users/yaa/pharmaseek/routes/staff.js)",
       "Bash(node --check c:/Users/yaa/pharmaseek/routes/pharmacist.js)",
-      "Bash(node --check c:/Users/yaa/pharmaseek/utils/medicineStatus.js)"
+      "Bash(node --check c:/Users/yaa/pharmaseek/utils/medicineStatus.js)",
+      "Bash(mysql -u root -h localhost pharmaseek_db -e \"SELECT * FROM medicine_batches;\")",
+      "Bash(mysql -u root -h localhost pharmaseek_db -e \"SELECT * FROM medicine_stock_summary;\")"
     ]
   }
 }

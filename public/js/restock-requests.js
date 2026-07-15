@@ -83,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmDeliveryRequestedQty = document.getElementById('confirmDeliveryRequestedQty');
   const confirmDeliveryReturnTo     = document.getElementById('confirmDeliveryReturnTo');
   const quantityReceivedInput       = document.getElementById('quantity_received');
+  const expirationDateInput         = document.getElementById('expiration_date');
+  const lotNumberInput              = document.getElementById('lot_number');
   const deliveryNotesInput          = document.getElementById('delivery_notes');
   const closeConfirmDeliveryBtn     = document.getElementById('closeConfirmDelivery');
   const cancelConfirmDeliveryBtn    = document.getElementById('cancelConfirmDelivery');
@@ -93,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmDeliveryForm.action = '/pharmacist/restock-requests/' + trigger.dataset.requestId + '/confirm-delivery';
     confirmDeliveryReturnTo.value = window.location.pathname + window.location.search;
     quantityReceivedInput.value = '';
+    if (expirationDateInput) expirationDateInput.value = '';
+    if (lotNumberInput) lotNumberInput.value = '';
     deliveryNotesInput.value = '';
     confirmDeliveryOverlay.classList.add('is-open');
   }

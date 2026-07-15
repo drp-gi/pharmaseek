@@ -89,6 +89,34 @@ CREATE TABLE restock_requests (
 );
 
 
+-- MEDICINE_BATCHES
+-- One row per physical lot/delivery of a medicine, each with its own
+-- quantity and expiration_date — a delivery can bring in stock that
+-- expires on a different date than what's already on the shelf, which a
+-- single stock_quantity/expiration_date column on medicines could never
+-- represent. Rows are never deleted — a depleted batch (quantity_on_hand
+-- = 0) is kept for audit/FEFO history, the same way medicines uses
+-- status='Discontinued' instead of DELETE.
+CREATE TABLE medicine_batches (
+    batch_id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id INT NOT NULL,
+    lot_number VARCHAR(100),
+    quantity_received INT NOT NULL,
+    quantity_on_hand INT NOT NULL,
+    expiration_date DATE,
+    received_date DATE NOT NULL DEFAULT (CURRENT_DATE),
+    request_id INT,
+    created_by INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (medicine_id) REFERENCES medicines(medicine_id),
+    FOREIGN KEY (request_id) REFERENCES restock_requests(request_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CHECK (quantity_on_hand >= 0 AND quantity_on_hand <= quantity_received),
+    INDEX idx_batches_medicine_expiry (medicine_id, expiration_date)
+);
+
+
 -- STOCK_TRANSACTIONS
 -- Every physical stock movement: a sale, a restock delivery, or a disposal.
 CREATE TABLE stock_transactions (
@@ -100,10 +128,12 @@ CREATE TABLE stock_transactions (
     notes TEXT,
     request_id INT,
     medicine_id INT,
+    batch_id INT,
     user_id INT,
 
     FOREIGN KEY (request_id) REFERENCES restock_requests(request_id),
     FOREIGN KEY (medicine_id) REFERENCES medicines(medicine_id),
+    FOREIGN KEY (batch_id) REFERENCES medicine_batches(batch_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -121,6 +151,23 @@ CREATE TABLE management_logs (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (medicine_id) REFERENCES medicines(medicine_id)
 );
+
+
+-- MEDICINE_STOCK_SUMMARY
+-- Per-medicine total stock + nearest expiring batch, aggregated from
+-- medicine_batches. Read sites that used to select medicines.stock_quantity/
+-- expiration_date directly now LEFT JOIN this view instead (depleted
+-- batches are excluded, so a medicine with no remaining stock simply has
+-- no row here — callers COALESCE the total to 0).
+CREATE VIEW medicine_stock_summary AS
+SELECT
+    medicine_id,
+    SUM(quantity_on_hand) AS stock_quantity,
+    MIN(expiration_date) AS nearest_expiration_date,
+    COUNT(*) AS batch_count
+FROM medicine_batches
+WHERE quantity_on_hand > 0
+GROUP BY medicine_id;
 
 
 -- SEED DATA
@@ -197,6 +244,32 @@ VALUES
  15.00, 300, 50, '2027-11-11', '/uploads/medicines/Omeprazole20mg.webp',
  (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
  (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines'));
+
+
+-- MEDICINE_BATCHES
+-- One opening-balance batch per medicine, carrying forward the same
+-- quantity/expiration_date seeded above — this is what a real delivery
+-- check-in would create going forward, just backdated as "already on the
+-- shelf" for demo purposes.
+
+INSERT INTO medicine_batches (medicine_id, lot_number, quantity_received, quantity_on_hand, expiration_date, received_date)
+VALUES
+((SELECT medicine_id FROM medicines WHERE medicine_name = 'Paracetamol 500mg'),
+ 'Opening balance', 1240, 1240, '2025-12-12', '2026-01-01'),
+
+((SELECT medicine_id FROM medicines WHERE medicine_name = 'Ibuprofen 400mg'),
+ 'Opening balance', 850, 850, '2027-03-20', '2026-01-01'),
+
+((SELECT medicine_id FROM medicines WHERE medicine_name = 'Amoxicillin 500mg'),
+ 'Opening balance', 42, 42, '2027-01-10', '2026-01-01'),
+
+((SELECT medicine_id FROM medicines WHERE medicine_name = 'Ascorbic Acid 500mg'),
+ 'Opening balance', 2100, 2100, '2028-05-01', '2026-01-01'),
+
+((SELECT medicine_id FROM medicines WHERE medicine_name = 'Omeprazole 20mg'),
+ 'Opening balance', 300, 300, '2027-11-11', '2026-01-01');
+-- Oseltamivir 75mg starts at 0 stock (see medicines seed above) — no
+-- batch row, matching how zero stock is represented everywhere else.
 
 
 -- RESTOCK REQUESTS

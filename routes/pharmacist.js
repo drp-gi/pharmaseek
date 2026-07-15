@@ -10,6 +10,7 @@ const db               = require('../db/connection');
 const { confirmDelivery } = require('../utils/confirmDelivery');
 const { maybeCreateRestockRequest } = require('../utils/autoRestock');
 const { getStatusBadge } = require('../utils/medicineStatus');
+const { deductFromBatches } = require('../utils/deductFromBatches');
 
 // All pharmacist routes require login + Pharmacist role
 router.use(isAuthenticated);
@@ -55,13 +56,16 @@ router.get('/dashboard', async (req, res) => {
     );
 
     const [[{ lowStock }]] = await db.query(
-      `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity < stock_threshold`
+      `SELECT COUNT(*) AS lowStock FROM medicines m
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE COALESCE(ms.stock_quantity, 0) < m.stock_threshold`
     );
 
     const [[{ expiringSoon }]] = await db.query(
-      `SELECT COUNT(*) AS expiringSoon FROM medicines
-       WHERE expiration_date IS NOT NULL
-         AND expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`
+      `SELECT COUNT(*) AS expiringSoon FROM medicines m
+       JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE ms.nearest_expiration_date IS NOT NULL
+         AND ms.nearest_expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)`
     );
 
     const [[{ pendingRestocks }]] = await db.query(
@@ -69,29 +73,34 @@ router.get('/dashboard', async (req, res) => {
     );
 
     const [lowStockItems] = await db.query(
-      `SELECT m.medicine_id, m.medicine_name, m.stock_quantity, m.stock_threshold, c.category_name
+      `SELECT m.medicine_id, m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity,
+              m.stock_threshold, c.category_name
        FROM medicines m
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        LEFT JOIN categories c ON m.category_id = c.category_id
-       WHERE m.stock_quantity < m.stock_threshold
-       ORDER BY m.stock_quantity ASC, (m.stock_threshold - m.stock_quantity) DESC
+       WHERE COALESCE(ms.stock_quantity, 0) < m.stock_threshold
+       ORDER BY COALESCE(ms.stock_quantity, 0) ASC, (m.stock_threshold - COALESCE(ms.stock_quantity, 0)) DESC
        LIMIT 8`
     );
 
     const [nearExpiryItems] = await db.query(
-      `SELECT m.medicine_id, m.medicine_name, m.expiration_date, c.category_name,
-              DATEDIFF(m.expiration_date, CURDATE()) AS daysLeft
+      `SELECT m.medicine_id, m.medicine_name, ms.nearest_expiration_date AS expiration_date, c.category_name,
+              DATEDIFF(ms.nearest_expiration_date, CURDATE()) AS daysLeft
        FROM medicines m
+       JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        LEFT JOIN categories c ON m.category_id = c.category_id
-       WHERE m.expiration_date IS NOT NULL
-         AND m.expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-       ORDER BY m.expiration_date ASC
+       WHERE ms.nearest_expiration_date IS NOT NULL
+         AND ms.nearest_expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+       ORDER BY ms.nearest_expiration_date ASC
        LIMIT 8`
     );
 
     const [pendingRestockItems] = await db.query(
-      `SELECT rr.request_id, rr.quantity_requested, rr.request_date, m.medicine_name, m.stock_quantity
+      `SELECT rr.request_id, rr.quantity_requested, rr.request_date, m.medicine_name,
+              COALESCE(ms.stock_quantity, 0) AS stock_quantity
        FROM restock_requests rr
        JOIN medicines m ON rr.medicine_id = m.medicine_id
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        WHERE rr.status = 'Pending'
        ORDER BY rr.request_date ASC
        LIMIT 10`
@@ -99,9 +108,10 @@ router.get('/dashboard', async (req, res) => {
 
     const [recentTransactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
-              m.medicine_name, m.stock_quantity, u.first_name, u.last_name
+              m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity, u.first_name, u.last_name
        FROM stock_transactions st
        JOIN medicines m ON st.medicine_id = m.medicine_id
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        JOIN users u ON st.user_id = u.user_id
        ORDER BY st.transaction_date DESC
        LIMIT 10`
@@ -146,9 +156,11 @@ async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
 
   const [requests] = await db.query(
     `SELECT rr.request_id, rr.quantity_requested, rr.request_date, rr.notes,
-            m.medicine_name, m.stock_quantity, c.category_name, st.transaction_quantity AS quantity_received
+            m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity, c.category_name,
+            st.transaction_quantity AS quantity_received
      FROM restock_requests rr
      JOIN medicines m ON rr.medicine_id = m.medicine_id
+     LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
      LEFT JOIN categories c ON m.category_id = c.category_id
      LEFT JOIN stock_transactions st ON st.request_id = rr.request_id AND st.transaction_type = 'restock'
      WHERE rr.status = ?
@@ -159,8 +171,10 @@ async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
   // Discontinued medicines aren't restockable, so they're left out of the
   // request dropdown entirely.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, stock_quantity, stock_threshold
-     FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
+    `SELECT m.medicine_id, m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity, m.stock_threshold
+     FROM medicines m
+     LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+     WHERE m.status = 'Active' ORDER BY m.medicine_name`
   );
 
   res.render('pharmacist/restock-requests', {
@@ -249,9 +263,10 @@ router.post('/restock-requests/:id/approve', async (req, res) => {
 router.post('/restock-requests/:id/dismiss', async (req, res) => {
   try {
     const [[request]] = await db.query(
-      `SELECT rr.request_id, m.stock_quantity
+      `SELECT rr.request_id, COALESCE(ms.stock_quantity, 0) AS stock_quantity
        FROM restock_requests rr
        JOIN medicines m ON rr.medicine_id = m.medicine_id
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        WHERE rr.request_id = ? AND rr.status = 'Pending'`,
       [req.params.id]
     );
@@ -275,11 +290,13 @@ router.post('/restock-requests/:id/dismiss', async (req, res) => {
 router.post('/restock-requests/:id/confirm-delivery', async (req, res) => {
   const qty = Number(req.body.quantity_received);
 
-  if (qty > 0) {
+  if (qty > 0 && req.body.expiration_date) {
     try {
       await confirmDelivery(db, {
         requestId: req.params.id,
         quantityReceived: qty,
+        expirationDate: req.body.expiration_date,
+        lotNumber: req.body.lot_number,
         notes: req.body.notes,
         userId: req.session.user.user_id
       });
@@ -319,11 +336,12 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
   // status dropdown) rather than round-tripping to the server.
   const [medicines] = await db.query(
     `SELECT m.medicine_id, m.medicine_name, m.brand_name, m.medicine_type, m.dose,
-            m.description, m.unit_price, m.stock_quantity, m.stock_threshold,
-            m.expiration_date, m.image_path, m.status,
+            m.description, m.unit_price, COALESCE(ms.stock_quantity, 0) AS stock_quantity, m.stock_threshold,
+            ms.nearest_expiration_date AS expiration_date, m.image_path, m.status,
             c.category_id, c.category_name,
             s.supplier_id, s.company_name AS supplier_name, s.phone_number AS supplier_phone
      FROM medicines m
+     LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
      LEFT JOIN categories c ON m.category_id = c.category_id
      LEFT JOIN suppliers s ON m.supplier_id = s.supplier_id
      ${whereClause}
@@ -335,6 +353,19 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
   // view) rather than also carrying a stock/expiry status.
   medicines.forEach((med) => {
     med.statusBadge = med.status === 'Discontinued' ? null : getStatusBadge(med);
+  });
+
+  // Batches feed the Edit Medicine modal's read-only stock summary — once
+  // a medicine has multiple lots, "stock" isn't a single editable field
+  // anymore, so the form just shows what's on hand per lot.
+  const [batches] = await db.query(
+    `SELECT medicine_id, batch_id, lot_number, quantity_on_hand, expiration_date
+     FROM medicine_batches
+     WHERE quantity_on_hand > 0
+     ORDER BY expiration_date ASC`
+  );
+  medicines.forEach((med) => {
+    med.batches = batches.filter((b) => b.medicine_id === med.medicine_id);
   });
 
   const groups = [];
@@ -380,6 +411,10 @@ router.get('/inventory', async (req, res) => {
 });
 
 // POST /pharmacist/inventory — add a new medicine
+// stock_quantity/expiration_date describe the medicine's first shipment,
+// so they land in medicine_batches (its opening batch) rather than on the
+// medicines row itself — same one-step "new product + first delivery"
+// form the pharmacist already knows, just wired to the batch model.
 router.post('/inventory', uploadMedicineImage, async (req, res) => {
   const {
     medicine_name, brand_name, medicine_type, dose, description,
@@ -392,37 +427,62 @@ router.post('/inventory', uploadMedicineImage, async (req, res) => {
   }
 
   const image_path = req.file ? `/uploads/medicines/${req.file.filename}` : null;
+  const qty = Number(stock_quantity);
 
+  let connection;
   try {
-    await db.query(
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
       `INSERT INTO medicines
          (medicine_name, brand_name, medicine_type, dose, description, unit_price,
-          stock_quantity, stock_threshold, expiration_date, image_path, category_id, supplier_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          stock_threshold, image_path, category_id, supplier_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         medicine_name, brand_name || null, medicine_type || null, dose || null, description || null,
-        unit_price, stock_quantity, stock_threshold, expiration_date || null, image_path,
+        unit_price, stock_threshold, image_path,
         category_id || null, supplier_id || null
       ]
     );
+
+    if (qty > 0) {
+      await connection.query(
+        `INSERT INTO medicine_batches
+           (medicine_id, quantity_received, quantity_on_hand, expiration_date, created_by)
+         VALUES (?, ?, ?, ?, ?)`,
+        [result.insertId, qty, qty, expiration_date || null, req.session.user.user_id]
+      );
+    }
+
+    await connection.commit();
     res.redirect('/pharmacist/inventory');
   } catch (err) {
+    if (connection) {
+      try { await connection.rollback(); } catch (rollbackErr) { console.error(rollbackErr); }
+    }
     console.error('Add medicine error:', err);
     await loadInventoryPage(res, req.session.user, { search: '', category: 'All' }, 'Could not add this medicine. Please try again.');
+  } finally {
+    if (connection) connection.release();
   }
 });
 
 // POST /pharmacist/inventory/:id — edit an existing medicine
+// stock_quantity/expiration_date are no longer editable here — a medicine
+// can have multiple batches with different quantities/expiries now, so
+// "the stock" isn't a single field. Stock only changes via Delivery, Sale,
+// or Disposal from this point on.
 // If no new file is uploaded, existing_image_path (a hidden field carrying
 // the medicine's current image_path) is kept so the photo isn't wiped out.
 router.post('/inventory/:id', uploadMedicineImage, async (req, res) => {
   const {
     medicine_name, brand_name, medicine_type, dose, description,
-    unit_price, stock_quantity, stock_threshold, expiration_date,
+    unit_price, stock_threshold,
     category_id, supplier_id, existing_image_path
   } = req.body;
 
-  if (!medicine_name || !unit_price || !stock_quantity || !stock_threshold) {
+  if (!medicine_name || !unit_price || !stock_threshold) {
     return loadInventoryPage(res, req.session.user, { search: '', category: 'All' }, 'Please fill in all required fields.');
   }
 
@@ -432,12 +492,12 @@ router.post('/inventory/:id', uploadMedicineImage, async (req, res) => {
     await db.query(
       `UPDATE medicines
        SET medicine_name = ?, brand_name = ?, medicine_type = ?, dose = ?, description = ?,
-           unit_price = ?, stock_quantity = ?, stock_threshold = ?, expiration_date = ?,
+           unit_price = ?, stock_threshold = ?,
            image_path = ?, category_id = ?, supplier_id = ?
        WHERE medicine_id = ?`,
       [
         medicine_name, brand_name || null, medicine_type || null, dose || null, description || null,
-        unit_price, stock_quantity, stock_threshold, expiration_date || null, image_path,
+        unit_price, stock_threshold, image_path,
         category_id || null, supplier_id || null, req.params.id
       ]
     );
@@ -481,8 +541,11 @@ async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = nul
   // Discontinued medicines can't be sold or disposed of, so they're left
   // out of this picker.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, unit_price, image_path
-     FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
+    `SELECT m.medicine_id, m.medicine_name, m.brand_name, m.medicine_type,
+            COALESCE(ms.stock_quantity, 0) AS stock_quantity, m.unit_price, m.image_path
+     FROM medicines m
+     LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+     WHERE m.status = 'Active' ORDER BY m.medicine_name`
   );
 
   let todaysEntries = [];
@@ -500,9 +563,10 @@ async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = nul
   } else if (activeTab === 'history') {
     [allTransactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
-              m.medicine_name, m.stock_quantity, u.first_name, u.last_name
+              m.medicine_name, COALESCE(ms.stock_quantity, 0) AS stock_quantity, u.first_name, u.last_name
        FROM stock_transactions st
        JOIN medicines m ON st.medicine_id = m.medicine_id
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
        JOIN users u ON st.user_id = u.user_id
        ORDER BY st.transaction_date DESC
        LIMIT 50`
@@ -562,29 +626,17 @@ router.post('/transactions/sale', async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const [[medicine]] = await connection.query(
-      `SELECT stock_quantity FROM medicines WHERE medicine_id = ? FOR UPDATE`,
-      [medicine_id]
-    );
+    const sold = await deductFromBatches(connection, {
+      medicineId: medicine_id,
+      quantity: qty,
+      userId: req.session.user.user_id,
+      transactionType: 'sale'
+    });
 
-    if (!medicine) {
+    if (!sold.ok) {
       await connection.rollback();
-      return loadPharmacistTransactionsPage(res, req.session.user, 'sale', 'That medicine no longer exists.');
+      return loadPharmacistTransactionsPage(res, req.session.user, 'sale', `Only ${sold.available} units in stock — can't sell ${qty}.`);
     }
-    if (qty > medicine.stock_quantity) {
-      await connection.rollback();
-      return loadPharmacistTransactionsPage(res, req.session.user, 'sale', `Only ${medicine.stock_quantity} units in stock — can't sell ${qty}.`);
-    }
-
-    await connection.query(
-      `UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE medicine_id = ?`,
-      [qty, medicine_id]
-    );
-    await connection.query(
-      `INSERT INTO stock_transactions (transaction_type, transaction_quantity, medicine_id, user_id)
-       VALUES ('sale', ?, ?, ?)`,
-      [qty, medicine_id, req.session.user.user_id]
-    );
 
     await maybeCreateRestockRequest(connection, {
       medicineId: medicine_id,
@@ -617,29 +669,18 @@ router.post('/transactions/disposal', async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const [[medicine]] = await connection.query(
-      `SELECT stock_quantity FROM medicines WHERE medicine_id = ? FOR UPDATE`,
-      [medicine_id]
-    );
+    const disposed = await deductFromBatches(connection, {
+      medicineId: medicine_id,
+      quantity: qty,
+      userId: req.session.user.user_id,
+      transactionType: 'disposal',
+      disposalReason: disposal_reason
+    });
 
-    if (!medicine) {
+    if (!disposed.ok) {
       await connection.rollback();
-      return loadPharmacistTransactionsPage(res, req.session.user, 'disposal', 'That medicine no longer exists.');
+      return loadPharmacistTransactionsPage(res, req.session.user, 'disposal', `Only ${disposed.available} units in stock — can't dispose ${qty}.`);
     }
-    if (qty > medicine.stock_quantity) {
-      await connection.rollback();
-      return loadPharmacistTransactionsPage(res, req.session.user, 'disposal', `Only ${medicine.stock_quantity} units in stock — can't dispose ${qty}.`);
-    }
-
-    await connection.query(
-      `UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE medicine_id = ?`,
-      [qty, medicine_id]
-    );
-    await connection.query(
-      `INSERT INTO stock_transactions (transaction_type, transaction_quantity, disposal_reason, medicine_id, user_id)
-       VALUES ('disposal', ?, ?, ?, ?)`,
-      [qty, disposal_reason, medicine_id, req.session.user.user_id]
-    );
 
     await maybeCreateRestockRequest(connection, {
       medicineId: medicine_id,
@@ -664,11 +705,13 @@ router.post('/transactions/disposal', async (req, res) => {
 router.post('/transactions/checkin/:id', async (req, res) => {
   const qty = Number(req.body.quantity_received);
 
-  if (qty > 0) {
+  if (qty > 0 && req.body.expiration_date) {
     try {
       await confirmDelivery(db, {
         requestId: req.params.id,
         quantityReceived: qty,
+        expirationDate: req.body.expiration_date,
+        lotNumber: req.body.lot_number,
         notes: req.body.notes,
         userId: req.session.user.user_id
       });
@@ -797,13 +840,16 @@ router.get('/notifications', async (req, res) => {
     const notifications = [];
 
     const [[{ lowStock }]] = await db.query(
-      `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity < stock_threshold AND status = 'Active'`
+      `SELECT COUNT(*) AS lowStock FROM medicines m
+       LEFT JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE COALESCE(ms.stock_quantity, 0) < m.stock_threshold AND m.status = 'Active'`
     );
     const [[{ expiringSoon }]] = await db.query(
-      `SELECT COUNT(*) AS expiringSoon FROM medicines
-       WHERE expiration_date IS NOT NULL
-         AND expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-         AND status = 'Active'`
+      `SELECT COUNT(*) AS expiringSoon FROM medicines m
+       JOIN medicine_stock_summary ms ON ms.medicine_id = m.medicine_id
+       WHERE ms.nearest_expiration_date IS NOT NULL
+         AND ms.nearest_expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         AND m.status = 'Active'`
     );
     const [[{ pendingRestocks }]] = await db.query(
       `SELECT COUNT(*) AS pendingRestocks FROM restock_requests WHERE status = 'Pending'`
