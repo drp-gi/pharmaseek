@@ -1,3 +1,12 @@
+// Forces a real reload when this page is restored from the browser's
+// back/forward cache (e.g. pressing Back after Logout). Modern Chrome will
+// bfcache a page even with Cache-Control: no-store, so the server-side
+// header alone isn't enough — this is what actually re-triggers the
+// isAuthenticated check and bounces back to /login if the session is gone.
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) window.location.reload();
+});
+
 // Wires the notification bell present in every page's topbar. The role
 // (admin/pharmacist/staff) is inferred from the URL prefix, since routes
 // are already cleanly split that way — no per-page config needed. The

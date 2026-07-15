@@ -163,8 +163,8 @@ You should see the PharmaSeek landing page.
 | Role        | Username   | Password   |
 |-------------|------------|------------|
 | Admin       | admin      | password   |
-| Pharmacist  | rcruz_ph   | password   |
-| Staff       | mreyes_s   | password   |
+| Pharmacist  | pharmacist | password   |
+| Staff       | staff      | password   |
 
 ---
 

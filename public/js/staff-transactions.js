@@ -1,4 +1,44 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // ── New Request modal ────────────────────────────────────
+  const newRequestOverlay  = document.getElementById('newRequestOverlay');
+  const openNewRequestBtn  = document.getElementById('openNewRequest');
+  const closeNewRequestBtn = document.getElementById('closeNewRequest');
+  const cancelNewRequestBtn = document.getElementById('cancelNewRequest');
+
+  const openNewRequestModal  = () => newRequestOverlay.classList.add('is-open');
+  const closeNewRequestModal = () => newRequestOverlay.classList.remove('is-open');
+
+  if (newRequestOverlay) {
+    if (openNewRequestBtn) openNewRequestBtn.addEventListener('click', openNewRequestModal);
+    if (closeNewRequestBtn) closeNewRequestBtn.addEventListener('click', closeNewRequestModal);
+    if (cancelNewRequestBtn) cancelNewRequestBtn.addEventListener('click', closeNewRequestModal);
+    newRequestOverlay.addEventListener('click', (e) => {
+      if (e.target === newRequestOverlay) closeNewRequestModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeNewRequestModal();
+    });
+
+    // Reopen automatically if the form was re-rendered with a validation error
+    if (newRequestOverlay.dataset.reopen === 'true') openNewRequestModal();
+  }
+
+  // suggested_quantity = (stock_threshold * 2) - current_stock_quantity
+  const newRequestMedicineSelect = document.getElementById('medicine_id');
+  const newRequestQuantityInput  = document.getElementById('quantity_requested');
+
+  if (newRequestMedicineSelect && newRequestQuantityInput) {
+    newRequestMedicineSelect.addEventListener('change', () => {
+      const option = newRequestMedicineSelect.options[newRequestMedicineSelect.selectedIndex];
+      const stock = Number(option.dataset.stock);
+      const threshold = Number(option.dataset.threshold);
+      if (!option.value || Number.isNaN(stock) || Number.isNaN(threshold)) return;
+
+      const suggested = Math.max(0, (threshold * 2) - stock);
+      newRequestQuantityInput.value = suggested;
+    });
+  }
+
   // ── Sale tab: cart-style entry ───────────────────────────
   // Search box + suggestions replace the old <select>; items get queued
   // into a client-side cart and only hit the server when "Record Sale"

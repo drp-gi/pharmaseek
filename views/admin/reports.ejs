@@ -61,6 +61,16 @@
           <a href="<%= tabHref('restock') %>" class="report-tab <%= tab === 'restock' ? 'active' : '' %>">Restock Request Status</a>
         </div>
 
+        <p class="tab-description">
+          <% if (tab === 'stock') { %>
+            Every stock in and stock out event (restocks, sales, disposals) for the selected date range.
+          <% } else if (tab === 'expiration') { %>
+            Medicines that are nearing or have already passed their expiration date.
+          <% } else { %>
+            All restock requests raised within the date range, along with their current status.
+          <% } %>
+        </p>
+
         <form action="/admin/reports" method="GET" class="filter-row">
           <input type="hidden" name="tab" value="<%= tab %>">
           <div class="filter-field">
@@ -118,7 +128,7 @@
                       <td><%= r.stock_quantity %></td>
                       <td>
                         <div class="tx-user">
-                          <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %><%= r.last_name[0] %></div>
+                          <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %></div>
                           <%= r.first_name %> <%= r.last_name[0] %>.
                         </div>
                       </td>
@@ -181,7 +191,7 @@
                       <td>
                         <% if (r.first_name) { %>
                           <div class="tx-user">
-                            <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %><%= r.last_name[0] %></div>
+                            <div class="avatar avatar--<%= colorIndex %>"><%= r.first_name[0] %></div>
                             <%= r.first_name %> <%= r.last_name[0] %>.
                           </div>
                         <% } else { %>
@@ -246,7 +256,7 @@
       </section>
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System. IM2.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System.
       </p>
 
     </main>

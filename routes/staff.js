@@ -180,7 +180,7 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
   // Discontinued medicines can't be sold or disposed of, so they're left
   // out of this picker.
   const [medicines] = await db.query(
-    `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, unit_price, image_path
+    `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, stock_threshold, unit_price, image_path
      FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
   );
 
@@ -244,6 +244,31 @@ router.get('/transactions', async (req, res) => {
       allTransactions: [],
       error: 'Could not load transactions. Please try again.'
     });
+  }
+});
+
+// POST /staff/restock-requests — Staff can raise a request from the
+// Transactions page, same as Pharmacist's own New Request modal, but
+// approval remains Pharmacist-only (routes/pharmacist.js handles that).
+router.post('/restock-requests', async (req, res) => {
+  const { medicine_id, quantity_requested, notes } = req.body;
+  const validTabs = ['sale', 'disposal', 'delivery', 'history'];
+  const tab = validTabs.includes(req.body.tab) ? req.body.tab : 'sale';
+
+  if (!medicine_id || !quantity_requested) {
+    return loadTransactionsPage(res, req.session.user, tab, 'Please select a medicine and enter a quantity.');
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO restock_requests (status, quantity_requested, notes, medicine_id, user_id)
+       VALUES ('Pending', ?, ?, ?, ?)`,
+      [quantity_requested, notes || null, medicine_id, req.session.user.user_id]
+    );
+    res.redirect(`/staff/transactions?tab=${tab}`);
+  } catch (err) {
+    console.error('Create restock request error:', err);
+    await loadTransactionsPage(res, req.session.user, tab, 'Could not create the restock request. Please try again.');
   }
 });
 

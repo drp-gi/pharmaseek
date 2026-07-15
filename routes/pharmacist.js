@@ -58,6 +58,11 @@ router.get('/dashboard', async (req, res) => {
       `SELECT COUNT(*) AS lowStock FROM medicines WHERE stock_quantity < stock_threshold`
     );
 
+    const [[{ expired }]] = await db.query(
+      `SELECT COUNT(*) AS expired FROM medicines
+       WHERE expiration_date IS NOT NULL AND expiration_date < CURDATE()`
+    );
+
     const [[{ expiringSoon }]] = await db.query(
       `SELECT COUNT(*) AS expiringSoon FROM medicines
        WHERE expiration_date IS NOT NULL
@@ -109,7 +114,7 @@ router.get('/dashboard', async (req, res) => {
 
     res.render('pharmacist/dashboard', {
       user: req.session.user,
-      stats: { totalMedicines, lowStock, expiringSoon, pendingRestocks },
+      stats: { totalMedicines, lowStock, expired, expiringSoon, pendingRestocks },
       lowStockItems,
       nearExpiryItems,
       pendingRestockItems,
@@ -120,7 +125,7 @@ router.get('/dashboard', async (req, res) => {
     console.error('Pharmacist dashboard load error:', err);
     res.render('pharmacist/dashboard', {
       user: req.session.user,
-      stats: { totalMedicines: 0, lowStock: 0, expiringSoon: 0, pendingRestocks: 0 },
+      stats: { totalMedicines: 0, lowStock: 0, expired: 0, expiringSoon: 0, pendingRestocks: 0 },
       lowStockItems: [],
       nearExpiryItems: [],
       pendingRestockItems: [],
@@ -445,6 +450,41 @@ router.post('/inventory/:id', uploadMedicineImage, async (req, res) => {
   } catch (err) {
     console.error('Edit medicine error:', err);
     await loadInventoryPage(res, req.session.user, { search: '', category: 'All' }, 'Could not update this medicine. Please try again.');
+  }
+});
+
+// POST /pharmacist/categories — add a category from the medicine form, no page reload
+router.post('/categories', async (req, res) => {
+  const category_name = (req.body.category_name || '').trim();
+  if (!category_name) return res.status(400).json({ error: 'Category name is required.' });
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO categories (category_name) VALUES (?)`,
+      [category_name]
+    );
+    res.json({ category_id: result.insertId, category_name });
+  } catch (err) {
+    console.error('Add category error:', err);
+    res.status(500).json({ error: 'Could not add category.' });
+  }
+});
+
+// POST /pharmacist/suppliers — add a supplier from the medicine form, no page reload
+router.post('/suppliers', async (req, res) => {
+  const company_name = (req.body.company_name || '').trim();
+  const phone_number = (req.body.phone_number || '').trim();
+  if (!company_name) return res.status(400).json({ error: 'Supplier name is required.' });
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO suppliers (company_name, phone_number) VALUES (?, ?)`,
+      [company_name, phone_number || null]
+    );
+    res.json({ supplier_id: result.insertId, company_name });
+  } catch (err) {
+    console.error('Add supplier error:', err);
+    res.status(500).json({ error: 'Could not add supplier.' });
   }
 });
 

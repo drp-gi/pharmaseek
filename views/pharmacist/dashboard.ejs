@@ -43,7 +43,7 @@
       <% } %>
 
       <!-- ── STAT CARDS ─────────────────────────────── -->
-      <section class="stats stats--4">
+      <section class="stats stats--5">
         <div class="stat-card">
           <div class="stat-card__icon stat-card__icon--blue"><i data-lucide="briefcase-medical" class="ic"></i></div>
           <div>
@@ -52,11 +52,19 @@
           </div>
         </div>
 
-        <div class="stat-card <%= stats.lowStock > 0 ? 'stat-card--warn' : '' %>">
+        <div class="stat-card">
           <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="circle-chevron-down" class="ic"></i></div>
           <div>
             <div class="stat-card__label">Low Stock Items</div>
             <div class="stat-card__value"><%= stats.lowStock %></div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card__icon stat-card__icon--red"><i data-lucide="calendar-x" class="ic"></i></div>
+          <div>
+            <div class="stat-card__label">Expired</div>
+            <div class="stat-card__value"><%= stats.expired %></div>
           </div>
         </div>
 
@@ -108,9 +116,9 @@
                       <td><%= Number(m.stock_threshold).toLocaleString() %> units</td>
                       <td>
                         <% if (outOfStock) { %>
-                          <span class="badge badge--out-of-stock">Out of Stock</span>
+                          Out of Stock
                         <% } else { %>
-                          <span class="badge badge--low-stock">Low Stock</span>
+                          Low Stock
                         <% } %>
                       </td>
                     </tr>
@@ -147,7 +155,7 @@
                       <td class="medicine-name"><%= m.medicine_name %></td>
                       <td><%= m.category_name || '—' %></td>
                       <td><%= new Date(m.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
-                      <td class="<%= m.daysLeft <= 7 ? 'text-low-stock' : '' %>">
+                      <td>
                         <%= m.daysLeft %> day<%= m.daysLeft === 1 ? '' : 's' %>
                       </td>
                     </tr>
@@ -244,7 +252,7 @@
               <% } else { %>
                 <% recentTransactions.forEach(function(tx) { %>
                   <% const isRestock = tx.transaction_type === 'restock'; %>
-                  <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                  <% const initials = tx.first_name[0]; %>
                   <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
                   <tr>
                     <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
@@ -274,7 +282,7 @@
 
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System. IM2.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System.
       </p>
 
     </main>

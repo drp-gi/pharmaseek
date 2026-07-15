@@ -28,6 +28,9 @@
           <p>Record sales, disposals, and deliveries</p>
         </div>
         <div class="topbar__actions">
+          <button class="btn-primary" id="openNewRequest" type="button">
+            <i data-lucide="plus" class="ic"></i> New Request
+          </button>
           <button class="bell" title="Notifications">
             <i data-lucide="bell" class="ic"></i>
             <span class="dot"></span>
@@ -52,6 +55,18 @@
         <a href="/staff/transactions?tab=history" class="report-tab <%= tab === 'history' ? 'active' : '' %>">History</a>
       </div>
 
+      <p class="tab-description">
+        <% if (tab === 'sale') { %>
+          Record medicines sold to customers and deduct them from stock.
+        <% } else if (tab === 'disposal') { %>
+          Record expired, damaged, or otherwise unsellable stock being removed from inventory.
+        <% } else if (tab === 'delivery') { %>
+          Confirm incoming deliveries for approved restock requests and update stock levels.
+        <% } else { %>
+          A full log of past sales, disposals, and delivery check ins.
+        <% } %>
+      </p>
+
       <% if (tab === 'sale') { %>
         <!-- ── NEW SALE ENTRY (cart) ─────────────────────── -->
         <section class="panel">
@@ -65,7 +80,7 @@
               </div>
               <div class="medicine-suggestions" id="saleMedicineSuggestions"></div>
             </div>
-            <div class="filter-field">
+            <div class="filter-field quantity-field">
               <label for="sale_quantity">Quantity</label>
               <input type="number" id="sale_quantity" min="1" placeholder="Enter quantity">
             </div>
@@ -140,7 +155,7 @@
               </div>
               <div class="medicine-suggestions" id="disposalMedicineSuggestions"></div>
             </div>
-            <div class="filter-field">
+            <div class="filter-field quantity-field">
               <label for="disposal_quantity">Quantity</label>
               <input type="number" id="disposal_quantity" min="1" placeholder="Enter quantity">
             </div>
@@ -264,7 +279,7 @@
                 <% } else { %>
                   <% allTransactions.forEach(function(tx) { %>
                     <% const isRestock = tx.transaction_type === 'restock'; %>
-                    <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                    <% const initials = tx.first_name[0]; %>
                     <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
                     <tr>
                       <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
@@ -291,7 +306,7 @@
       <% } %>
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System.
       </p>
 
     </main>
@@ -328,6 +343,50 @@
         <div class="modal__actions">
           <button type="button" class="btn-outline" id="cancelConfirmDelivery">Cancel</button>
           <button type="submit" class="btn-success">Confirm Delivery</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── NEW REQUEST MODAL ─────────────────────────── -->
+  <div class="modal-overlay" id="newRequestOverlay" data-reopen="<%= error ? 'true' : 'false' %>">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>New Restock Request</h3>
+        <button class="modal__close" id="closeNewRequest" type="button">
+          <i data-lucide="x" class="ic"></i>
+        </button>
+      </div>
+
+      <form action="/staff/restock-requests" method="POST" class="modal__form">
+        <input type="hidden" name="tab" value="<%= tab %>">
+
+        <div class="field">
+          <label for="medicine_id">Medicine</label>
+          <select id="medicine_id" name="medicine_id" required>
+            <option value="">Select a medicine</option>
+            <% medicines.forEach(function(m) { %>
+              <option value="<%= m.medicine_id %>"
+                      data-stock="<%= m.stock_quantity %>"
+                      data-threshold="<%= m.stock_threshold %>"><%= m.medicine_name %></option>
+            <% }); %>
+          </select>
+          <p class="field__hint">Quantity below is a system suggestion — edit it before submitting if needed.</p>
+        </div>
+
+        <div class="field">
+          <label for="quantity_requested">Quantity Requested</label>
+          <input type="number" id="quantity_requested" name="quantity_requested" placeholder="0" min="1" required>
+        </div>
+
+        <div class="field">
+          <label for="notes">Notes (Optional)</label>
+          <textarea id="notes" name="notes" placeholder="Any additional details..."></textarea>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn-outline" id="cancelNewRequest">Cancel</button>
+          <button type="submit" class="btn-primary">Submit Request</button>
         </div>
       </form>
     </div>

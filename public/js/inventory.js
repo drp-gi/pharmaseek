@@ -234,6 +234,13 @@ document.addEventListener('DOMContentLoaded', () => {
     existingImagePathInput.value = '';
     uploadDropzoneText.textContent = 'Click to upload or drag and drop';
     setImagePreview(null);
+    ['addCategoryRow', 'addSupplierRow'].forEach((id) => {
+      const row = document.getElementById(id);
+      row.hidden = true;
+      row.querySelectorAll('input').forEach((input) => { input.value = ''; });
+    });
+    document.getElementById('addCategoryError').hidden = true;
+    document.getElementById('addSupplierError').hidden = true;
   }
 
   function openAddForm() {
@@ -270,6 +277,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openForm();
   }
+
+  // ── Quick-add category / supplier ────────────────────────
+  // Triggered by picking "+ Add new ..." from the dropdown itself, rather
+  // than a separate button, so the field doesn't need any extra width.
+  function wireQuickAdd({ select, row, cancelBtn, saveBtn, errorEl, buildBody, endpoint, onSaved }) {
+    function openRow() {
+      select.value = '';
+      row.hidden = false;
+      errorEl.hidden = true;
+      row.querySelector('input').focus();
+    }
+    function closeRow() {
+      row.hidden = true;
+      errorEl.hidden = true;
+      row.querySelectorAll('input').forEach((input) => { input.value = ''; });
+    }
+
+    select.addEventListener('change', () => {
+      if (select.value === '__new__') openRow();
+    });
+    cancelBtn.addEventListener('click', closeRow);
+
+    row.querySelectorAll('input').forEach((input) => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); }
+        if (e.key === 'Escape') closeRow();
+      });
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildBody())
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errorEl.textContent = data.error || 'Could not save. Please try again.';
+          errorEl.hidden = false;
+          return;
+        }
+        const option = document.createElement('option');
+        onSaved(option, data);
+        option.selected = true;
+        select.insertBefore(option, select.querySelector('option[value="__new__"]'));
+        closeRow();
+      } catch {
+        errorEl.textContent = 'Could not reach the server. Please try again.';
+        errorEl.hidden = false;
+      }
+    });
+  }
+
+  wireQuickAdd({
+    select: document.getElementById('category_id'),
+    row: document.getElementById('addCategoryRow'),
+    cancelBtn: document.getElementById('cancelNewCategory'),
+    saveBtn: document.getElementById('saveNewCategory'),
+    errorEl: document.getElementById('addCategoryError'),
+    endpoint: '/pharmacist/categories',
+    buildBody: () => ({ category_name: document.getElementById('newCategoryName').value.trim() }),
+    onSaved: (option, data) => {
+      option.value = data.category_id;
+      option.textContent = data.category_name;
+    }
+  });
+
+  wireQuickAdd({
+    select: document.getElementById('supplier_id'),
+    row: document.getElementById('addSupplierRow'),
+    cancelBtn: document.getElementById('cancelNewSupplier'),
+    saveBtn: document.getElementById('saveNewSupplier'),
+    errorEl: document.getElementById('addSupplierError'),
+    endpoint: '/pharmacist/suppliers',
+    buildBody: () => ({
+      company_name: document.getElementById('newSupplierName').value.trim(),
+      phone_number: document.getElementById('newSupplierPhone').value.trim()
+    }),
+    onSaved: (option, data) => {
+      option.value = data.supplier_id;
+      option.textContent = data.company_name;
+    }
+  });
 
   document.getElementById('openAddMedicine').addEventListener('click', openAddForm);
 

@@ -52,6 +52,18 @@
         <a href="/pharmacist/transactions?tab=history" class="report-tab <%= tab === 'history' ? 'active' : '' %>">History</a>
       </div>
 
+      <p class="tab-description">
+        <% if (tab === 'sale') { %>
+          Record medicines sold to customers and deduct them from stock.
+        <% } else if (tab === 'disposal') { %>
+          Record expired, damaged, or otherwise unsellable stock being removed from inventory.
+        <% } else if (tab === 'delivery') { %>
+          Confirm incoming deliveries for approved restock requests and update stock levels.
+        <% } else { %>
+          A full log of past sales, disposals, and delivery check ins.
+        <% } %>
+      </p>
+
       <% if (tab === 'sale') { %>
         <!-- ── NEW SALE ENTRY (cart) ─────────────────────── -->
         <section class="panel">
@@ -264,7 +276,7 @@
                 <% } else { %>
                   <% allTransactions.forEach(function(tx) { %>
                     <% const isRestock = tx.transaction_type === 'restock'; %>
-                    <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                    <% const initials = tx.first_name[0]; %>
                     <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
                     <tr>
                       <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
@@ -291,7 +303,7 @@
       <% } %>
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System.
       </p>
 
     </main>

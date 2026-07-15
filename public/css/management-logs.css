@@ -14,9 +14,7 @@
   border-color: #e2e8f0;
 }
 
-/* ── Filed By avatar: single initial, Google-contacts-style ─
-   palette, but lightened (light tint background + a matching
-   saturated text color, rather than a solid saturated fill). ── */
+/* ── Filed By avatar: single initial ── */
 .log-avatar {
   width: 30px;
   height: 30px;
@@ -28,16 +26,16 @@
   font-size: 0.78rem;
   flex-shrink: 0;
 }
-.log-avatar--0 { background: #fee2e2; color: #dc2626; } /* red */
-.log-avatar--1 { background: #ffedd5; color: #ea580c; } /* orange */
-.log-avatar--2 { background: #fef3c7; color: #b45309; } /* amber */
-.log-avatar--3 { background: #dcfce7; color: #16a34a; } /* green */
-.log-avatar--4 { background: #ccfbf1; color: #0d9488; } /* teal */
-.log-avatar--5 { background: #dbeafe; color: #2563eb; } /* blue */
-.log-avatar--6 { background: #e0e7ff; color: #4f46e5; } /* indigo */
-.log-avatar--7 { background: #f3e8ff; color: #9333ea; } /* purple */
-.log-avatar--8 { background: #fce7f3; color: #db2777; } /* pink */
-.log-avatar--9 { background: #f1f5f9; color: #64748b; } /* blue-grey */
+.log-avatar--0,
+.log-avatar--1,
+.log-avatar--2,
+.log-avatar--3,
+.log-avatar--4,
+.log-avatar--5,
+.log-avatar--6,
+.log-avatar--7,
+.log-avatar--8,
+.log-avatar--9 { background: #1886E7; color: #fff; }
 
 /* Prev/next are <a> links (server-side pagination), so a native
    :disabled state doesn't apply — this is its visual equivalent. */

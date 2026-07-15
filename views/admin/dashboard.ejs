@@ -47,7 +47,7 @@
         <div class="stat-card">
           <div class="stat-card__icon stat-card__icon--green"><i data-lucide="wallet" class="ic"></i></div>
           <div>
-            <div class="stat-card__label">Sales Revenue (This Month)</div>
+            <div class="stat-card__label">Total Inventory Value</div>
             <div class="stat-card__value">₱<%= Number(stats.revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
           </div>
         </div>
@@ -80,7 +80,7 @@
               <% } else { %>
                 <% transactions.forEach(function(tx, i) { %>
                   <% const isRestock = tx.transaction_type === 'restock'; %>
-                  <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                  <% const initials = tx.first_name[0]; %>
                   <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
                   <tr>
                     <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
@@ -109,7 +109,7 @@
 
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System. IM2.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System.
       </p>
 
     </main>

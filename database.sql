@@ -130,8 +130,8 @@ CREATE TABLE management_logs (
 INSERT INTO users (first_name, last_name, username, password, email, position, status)
 VALUES
 ('Admin', 'User', 'admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin.user@pharmaseek.com', 'Admin', 'Active'),
-('Rica', 'Cruz', 'rcruz_ph', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'rica.cruz@pharmaseek.com', 'Pharmacist', 'Active'),
-('Marco', 'Reyes', 'mreyes_s', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'marco.reyes@pharmaseek.com', 'Staff', 'Active');
+('Pharmie', 'Cyst', 'pharmacist', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'rica.cruz@pharmaseek.com', 'Pharmacist', 'Active'),
+('Staph', 'Taff', 'staff', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'marco.reyes@pharmaseek.com', 'Staff', 'Active');
 
 
 INSERT INTO pharmacy_info (pharmacy_id, pharmacy_name, address, contact_number, email)
@@ -145,13 +145,17 @@ VALUES
 ('Antibiotics', 'Medicines that fight bacterial infections'),
 ('Vitamins', 'Dietary supplements and vitamins'),
 ('Antivirals', 'Medicines used to treat viral infections'),
-('Antacids', 'Medicines that neutralize stomach acid');
+('Antacids', 'Medicines that neutralize stomach acid'),
+('Nasal Decongestants', 'Over-the-counter (OTC) medicines for nasal congestion relief');
 
 
 INSERT INTO suppliers (company_name, contact_person, phone_number, email)
 VALUES
 ('MediCore Philippines', 'Juan Dela Cruz', '0920-111-2222', 'orders@medicore.ph'),
-('Unilab Distribution Inc.', 'Maria Santos', '+63 2 8858 1000', 'orders@unilab.com.ph');
+('Unilab Distribution Inc.', 'Maria Santos', '+63 2 8858 1000', 'orders@unilab.com.ph'),
+('Procter & Gamble (P&G) Distributing Philippines', 'Sales Representative', '02-8894-3955', 'orders@pg.com.ph'),
+('Reckitt Benckiser Healthcare Philippines', 'Logistics Officer', '02-8802-7777', 'orders@rb.com'),
+('Sanofi-Aventis Philippines', 'Account Manager', '02-8859-5555', 'orders@sanofi.com');
 
 
 -- MEDICINES
@@ -196,7 +200,32 @@ VALUES
  'Proton pump inhibitor used to treat heartburn, acid reflux, and stomach ulcers.',
  15.00, 300, 50, '2027-11-11', '/uploads/medicines/Omeprazole20mg.webp',
  (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
- (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines'));
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'MediCore Philippines')),
+
+('Camphor + Menthol', 'Vicks Inhaler', 'Nasal Inhaler Tube', '197mg + 197mg per 0.5mL',
+ 'Fast temporary relief from nasal congestion and clogging due to colds, hay fever, or upper respiratory allergies. Shrinks swollen sinus membranes. Store below 30°C. For external use only.',
+ 109.50, 100, 15, '2028-06-30', '/uploads/medicines/vicksinhaler.webp',
+ (SELECT category_id FROM categories WHERE category_name = 'Nasal Decongestants'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Procter & Gamble (P&G) Distributing Philippines')),
+
+('Aluminum Hydroxide + Magnesium Hydroxide + Simethicone', 'Kremil-S', 'Chewable Tablet', '178mg + 233mg + 30mg',
+ 'Symptomatic relief of hyperacidity associated with peptic ulcer gastritis esophagitis and dyspepsia. Alleviates gassiness and bloating. Tablet may be chewed then swallowed. Store below 30°C.',
+ 10.25, 250, 20, '2028-04-20', '/uploads/medicines/kremil_s.jpg',
+ (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Unilab Distribution Inc.')),
+
+('Sodium Alginate + Sodium Bicarbonate + Calcium Carbonate', 'Gaviscon Double Action', 'Liquid Sachet', '500mg + 267mg + 160mg per 10mL',
+ 'Dual action formula for heartburn and indigestion. Forms a protective physical barrier raft over stomach contents to prevent acid reflux. Fast relief lasting up to 4 hours. Store below 30°C. Do not freeze.',
+ 45.00, 120, 20, '2027-11-15', '/uploads/medicines/gaviscon.jpg',
+ (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Reckitt Benckiser Healthcare Philippines')),
+
+('Aluminum Hydroxide + Magnesium Hydroxide', 'Maalox', 'Chewable Tablet', '200mg + 200mg',
+ 'Balanced antacid compound used for the relief of stomach upset indigestion and sour stomach. Chew 2 to 4 tablets 20 to 60 minutes after meals and at bedtime. Store below 30°C.',
+ 12.75, 300, 30, '2028-08-30', '/uploads/medicines/maalox.jpg',
+ (SELECT category_id FROM categories WHERE category_name = 'Antacids'),
+ (SELECT supplier_id FROM suppliers WHERE company_name = 'Sanofi-Aventis Philippines'));
+
 
 
 -- RESTOCK REQUESTS
@@ -208,17 +237,17 @@ VALUES
 ('Pending', '2026-07-09 09:15:00', 100,
  'Completely out of stock — flu season demand.',
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Oseltamivir 75mg'),
- (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+ (SELECT user_id FROM users WHERE username = 'staff')),
 
 ('Pending', '2026-07-08 14:40:00', 200,
  'Below threshold, still moving fast.',
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Amoxicillin 500mg'),
- (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+ (SELECT user_id FROM users WHERE username = 'staff')),
 
 ('Approved', '2026-07-06 11:00:00', 300,
  'Approved by Pharmacist, delivery pending.',
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ibuprofen 400mg'),
- (SELECT user_id FROM users WHERE username = 'mreyes_s'));
+ (SELECT user_id FROM users WHERE username = 'staff'));
 
 
 -- STOCK TRANSACTIONS
@@ -229,15 +258,15 @@ INSERT INTO stock_transactions (transaction_type, transaction_quantity, transact
 VALUES
 ('sale', 12, '2026-07-10 09:20:00', NULL,
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Paracetamol 500mg'),
- (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+ (SELECT user_id FROM users WHERE username = 'staff')),
 
 ('sale', 5, '2026-07-10 10:45:00', NULL,
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ibuprofen 400mg'),
- (SELECT user_id FROM users WHERE username = 'mreyes_s')),
+ (SELECT user_id FROM users WHERE username = 'staff')),
 
 ('sale', 20, '2026-07-10 13:05:00', NULL,
  (SELECT medicine_id FROM medicines WHERE medicine_name = 'Ascorbic Acid 500mg'),
- (SELECT user_id FROM users WHERE username = 'mreyes_s'));
+ (SELECT user_id FROM users WHERE username = 'staff'));
 
 
 -- MANAGEMENT LOGS

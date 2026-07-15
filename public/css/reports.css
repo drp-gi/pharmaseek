@@ -28,6 +28,12 @@
   border-bottom-color: #1d6ed8;
 }
 
+.tab-description {
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin: -8px 0 28px;
+}
+
 /* ── Filter row ───────────────────────────────────────────── */
 .filter-row {
   

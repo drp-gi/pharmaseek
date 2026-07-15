@@ -52,6 +52,15 @@
   padding-left: 38px;
 }
 
+/* ── Quantity field (Sale / Disposal) ─────────────────────── */
+.quantity-field {
+  min-width: 160px;
+}
+.quantity-field input {
+  width: 100%;
+  padding: 9px 14px;
+}
+
 .medicine-suggestions {
   display: none;
   position: absolute;

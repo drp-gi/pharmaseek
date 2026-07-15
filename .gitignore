@@ -2,3 +2,14 @@ node_modules/
 .env
 public/uploads/*
 !public/uploads/.gitkeep
+
+# Seed-data medicine photos referenced by database.sql — these need to
+# ship with the repo so a fresh clone + seed doesn't have broken images.
+!public/uploads/medicines/
+public/uploads/medicines/*
+!public/uploads/medicines/paracetamol500.webp
+!public/uploads/medicines/ibuprofen400.webp
+!public/uploads/medicines/amoxicillin500.avif
+!public/uploads/medicines/ascorbic500mg.png
+!public/uploads/medicines/Oseltamivir75mg.jpg
+!public/uploads/medicines/Omeprazole20mg.webp

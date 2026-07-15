@@ -330,6 +330,7 @@
   align-items: center;
 }
 .upload-preview {
+  position: relative;
   width: 70px;
   height: 70px;
   border-radius: 10px;
@@ -342,6 +343,8 @@
   overflow: hidden;
 }
 .upload-preview img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -368,6 +371,50 @@
   font-size: 0.75rem;
   color: #9ca3af;
   margin-top: 2px;
+}
+
+/* ── Quick-add category / supplier (inline, inside medicine form) ── */
+.quick-add-row[hidden] { display: none; }
+.quick-add-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+}
+.quick-add-row input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.quick-add-row__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.quick-add-row__actions .btn-outline {
+  padding: 7px 14px;
+}
+.btn-text {
+  border: none;
+  background: none;
+  padding: 7px 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+.btn-text:hover { color: #374151; }
+.field__error {
+  font-size: 0.78rem;
+  color: #dc2626;
+  margin-top: 6px;
 }
 
 /* ── Responsive ───────────────────────────────────────────── */

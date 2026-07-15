@@ -146,7 +146,7 @@
       <% } %>
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System.
       </p>
 
     </main>
@@ -306,7 +306,16 @@
               <% categories.forEach(function(c) { %>
                 <option value="<%= c.category_id %>"><%= c.category_name %></option>
               <% }); %>
+              <option value="__new__">+ Add new category</option>
             </select>
+            <div class="quick-add-row" id="addCategoryRow" hidden>
+              <input type="text" id="newCategoryName" placeholder="Category name">
+              <div class="quick-add-row__actions">
+                <button type="button" class="btn-text" id="cancelNewCategory">Cancel</button>
+                <button type="button" class="btn-outline" id="saveNewCategory">Add</button>
+              </div>
+            </div>
+            <p class="field__error" id="addCategoryError" hidden></p>
           </div>
           <div class="field">
             <label for="supplier_id">Supplier (Optional)</label>
@@ -315,7 +324,17 @@
               <% suppliers.forEach(function(s) { %>
                 <option value="<%= s.supplier_id %>"><%= s.company_name %></option>
               <% }); %>
+              <option value="__new__">+ Add new supplier</option>
             </select>
+            <div class="quick-add-row" id="addSupplierRow" hidden>
+              <input type="text" id="newSupplierName" placeholder="Company name">
+              <input type="text" id="newSupplierPhone" placeholder="Phone (optional)">
+              <div class="quick-add-row__actions">
+                <button type="button" class="btn-text" id="cancelNewSupplier">Cancel</button>
+                <button type="button" class="btn-outline" id="saveNewSupplier">Add</button>
+              </div>
+            </div>
+            <p class="field__error" id="addSupplierError" hidden></p>
           </div>
         </div>
 
