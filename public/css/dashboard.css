@@ -59,14 +59,14 @@ html, body {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: #1d6ed8;
+  background: #16294d;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .sidebar__logo-icon .ic {
-  width: 18px;
-  height: 18px;
+  width: 40px;
+  height: 40px;
   color: #fff;
 }
 .sidebar__logo-text {
@@ -238,8 +238,8 @@ html, body {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  background: #fff;
+  border: 1.5px solid #f4f6f9;
+  background: #f4f6f9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -316,8 +316,8 @@ html, body {
   flex-shrink: 0;
 }
 .notif-item__icon .ic { width: 16px; height: 16px; }
-.notif-item--danger .notif-item__icon  { background: #fee2e2; color: #dc2626; }
-.notif-item--warning .notif-item__icon { background: #fef3c7; color: #d97706; }
+.notif-item--danger .notif-item__icon  { background: #ffffff; color: #dc2626; }
+.notif-item--warning .notif-item__icon { background: #ffffff; color: #DE1A58; }
 .notif-item--info .notif-item__icon    { background: #dbeafe; color: #1d6ed8; }
 .notif-item__body { flex: 1; min-width: 0; }
 .notif-item__title {
@@ -372,15 +372,15 @@ hr.divider {
 .stat-card {
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 14px;
+  border-radius: 4px;
   padding: 20px 22px;
   display: flex;
   align-items: center;
   gap: 16px;
 }
 .stat-card--warn {
-  border-color: #fbbf24;
-  border-left: 4px solid #f59e0b;
+  border-color: #DE1A58 ;
+  border-left: 4px solid #DE1A58;
   box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15);
 }
 .stat-card--danger {
@@ -398,13 +398,13 @@ hr.divider {
   flex-shrink: 0;
 }
 .stat-card__icon .ic {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
 }
-.stat-card__icon--blue   { background: #eaf2ff; color: #1d6ed8; }
-.stat-card__icon--amber  { background: #fef3c7; color: #d97706; }
-.stat-card__icon--green  { background: #dcfce7; color: #16a34a; }
-.stat-card__icon--red    { background: #fee2e2; color: #dc2626; }
+.stat-card__icon--blue   { background: #ffffff; color: #1d6ed8; }
+.stat-card__icon--amber  { background: #ffffff; color: #DE1A58; }
+.stat-card__icon--green  { background: #ffffff; color: #F39422; }
+.stat-card__icon--red    { background: #ffffff; color: #dc2626; }
 
 .stat-card__label {
   font-size: 0.82rem;
@@ -421,7 +421,7 @@ hr.divider {
 .panel {
   background: #fff;
   border: 1px solid #e5e9f0;
-  border-radius: 14px;
+  border-radius: 6px;
   padding: 24px;
   margin-bottom: 24px;
 }
@@ -456,14 +456,14 @@ hr.divider {
 }
 .btn-outline:hover {
   border-color: #1d6ed8;
-  color: #1d6ed8;
+  color: #d81da3;
 }
 .btn-outline .ic {
   width: 14px;
   height: 14px;
 }
 
-/* ── Table ────────────────────────────────────────────────── */
+/* ── Table ──────────ahhhhh──────────────────────a────────────────── */
 .table-wrap {
   overflow-x: auto;
 }
@@ -548,8 +548,8 @@ table.tx-table {
 
 /* Out of Stock is deliberately louder than Low Stock — solid fill vs
    a light tint — since it's the more urgent of the two. */
-.badge--out-of-stock { background: #dc2626; color: #fff; }
-.badge--low-stock    { background: #fee2e2; color: #b91c1c; }
+.badge--out-of-stock { background: #fee2e2; color: #DE1A58; }
+.badge--low-stock    { background: #DE1A58; color: #fee2e2; }
 
 /* Approve / Dismiss — same fixed-width pill pattern as the row
    Activate/Deactivate toggle, so the two buttons never cause layout
@@ -563,7 +563,7 @@ table.tx-table {
   gap: 5px;
   width: 100px;
   padding: 7px 0;
-  border-radius: 999px;
+  border-radius: px;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.02em;

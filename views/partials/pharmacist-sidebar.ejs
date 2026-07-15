@@ -1,6 +1,6 @@
 <aside class="sidebar">
   <div class="sidebar__logo">
-    <div class="sidebar__logo-icon"><i data-lucide="pill" class="ic"></i></div>
+    <div class="sidebar__logo-icon"><i data-lucide="stethoscope" class="ic"></i></div>
     <span class="sidebar__logo-text">PharmaSeek</span>
   </div>
 
@@ -9,7 +9,7 @@
       <i data-lucide="layout-grid" class="ic"></i> Dashboard
     </a>
     <a href="/pharmacist/inventory" class="sidebar__link <%= active === 'inventory' ? 'active' : '' %>">
-      <i data-lucide="package" class="ic"></i> Inventory
+      <i data-lucide="briefcase-medical" class="ic"></i> Inventory
     </a>
     <a href="/pharmacist/restock-requests" class="sidebar__link <%= active === 'restock' ? 'active' : '' %>">
       <i data-lucide="arrow-left-right" class="ic"></i> Restock Requests
@@ -17,9 +17,7 @@
     <a href="/pharmacist/transactions" class="sidebar__link <%= active === 'transactions' ? 'active' : '' %>">
       <i data-lucide="receipt" class="ic"></i> Transactions
     </a>
-    <a href="#" class="sidebar__link <%= active === 'alerts' ? 'active' : '' %>">
-      <i data-lucide="bell" class="ic"></i> Alerts
-    </a>
+    
     <a href="/pharmacist/settings" class="sidebar__link <%= active === 'settings' ? 'active' : '' %>">
       <i data-lucide="settings" class="ic"></i> Settings
     </a>

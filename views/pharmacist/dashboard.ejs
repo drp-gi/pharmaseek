@@ -45,7 +45,7 @@
       <!-- ── STAT CARDS ─────────────────────────────── -->
       <section class="stats stats--4">
         <div class="stat-card">
-          <div class="stat-card__icon stat-card__icon--blue"><i data-lucide="package" class="ic"></i></div>
+          <div class="stat-card__icon stat-card__icon--blue"><i data-lucide="briefcase-medical" class="ic"></i></div>
           <div>
             <div class="stat-card__label">Total Medicines</div>
             <div class="stat-card__value"><%= stats.totalMedicines %></div>
@@ -53,7 +53,7 @@
         </div>
 
         <div class="stat-card <%= stats.lowStock > 0 ? 'stat-card--warn' : '' %>">
-          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="triangle-alert" class="ic"></i></div>
+          <div class="stat-card__icon stat-card__icon--amber"><i data-lucide="circle-chevron-down" class="ic"></i></div>
           <div>
             <div class="stat-card__label">Low Stock Items</div>
             <div class="stat-card__value"><%= stats.lowStock %></div>
@@ -211,20 +211,9 @@
         </section>
       <% } %>
 
-      <!-- ── QUICK LINKS ──────────────────────────────── -->
-      <section class="panel">
-        <div class="panel__header">
-          <h2>Quick Links</h2>
-        </div>
-        <div class="quick-links">
-          <a href="/pharmacist/inventory" class="quick-link">View Inventory <i data-lucide="package" class="ic trailing"></i></a>
-          <a href="/pharmacist/restock-requests" class="quick-link">Restock Requests <i data-lucide="arrow-left-right" class="ic trailing"></i></a>
-          <a href="#" class="quick-link">Alerts <i data-lucide="bell" class="ic trailing"></i></a>
-        </div>
-      </section>
 
       <p class="page-footer">
-        &copy; <%= new Date().getFullYear() %> PharmaSeek Management Systems. All rights reserved.
+        &copy; <%= new Date().getFullYear() %> PharmaSeek Inventory Management System. IM2.
       </p>
 
     </main>
