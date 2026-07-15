@@ -369,6 +369,7 @@ hr.divider {
   margin-bottom: 28px;
 }
 .stats--4 { grid-template-columns: repeat(4, 1fr); }
+.stats--2 { grid-template-columns: repeat(2, 1fr); }
 .stat-card {
   background: #fff;
   border: 1px solid #e5e9f0;
@@ -528,7 +529,7 @@ table.tx-table {
 .badge {
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 4px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.03em;

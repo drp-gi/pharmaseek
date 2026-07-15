@@ -110,7 +110,7 @@
                     <td><%= u.username %></td>
                     <td><span class="badge badge-role--<%= u.position.toLowerCase() %>"><%= u.position.toUpperCase() %></span></td>
                     <td><%= u.email || '—' %></td>
-                    <td><span class="badge badge-status--<%= u.status.toLowerCase() %>"><%= u.status.toUpperCase() %></span></td>
+                    <td><span class="badge badge-status--<%= u.status.toLowerCase() %>"><%= u.status === 'Inactive' ? 'DISABLED' : u.status.toUpperCase() %></span></td>
                     <td>
                       <div class="row-actions">
                         <button class="icon-btn edit-user-btn" type="button" title="Edit user"
