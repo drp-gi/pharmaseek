@@ -77,6 +77,146 @@
         </div>
       </section>
 
+      <!-- ── STOCK + EXPIRATION ALERTS ────────────────── -->
+      <section class="bottom-grid">
+        <div class="panel">
+          <div class="panel__header">
+            <h2>Stock Alerts</h2>
+          </div>
+
+          <div class="table-wrap">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Category</th>
+                  <th>Current Stock</th>
+                  <th>Threshold</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (stockAlertItems.length === 0) { %>
+                  <tr class="empty-row"><td colspan="5">No medicines are below their stock threshold.</td></tr>
+                <% } else { %>
+                  <% stockAlertItems.forEach(function(m) { %>
+                    <% const outOfStock = Number(m.stock_quantity) === 0; %>
+                    <tr>
+                      <td class="medicine-name"><%= m.medicine_name %></td>
+                      <td><%= m.category_name || '—' %></td>
+                      <td class="text-low-stock"><%= Number(m.stock_quantity).toLocaleString() %> units</td>
+                      <td><%= Number(m.stock_threshold).toLocaleString() %> units</td>
+                      <td>
+                        <% if (outOfStock) { %>
+                          <span class="badge badge--out-of-stock">Out of Stock</span>
+                        <% } else { %>
+                          <span class="badge badge--low-stock">Low Stock</span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+
+          <a href="/staff/inventory"><button class="btn-primary btn-primary--below-table">View Full Inventory <i data-lucide="arrow-right" class="ic"></i></button></a>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <h2>Expiration Alerts</h2>
+          </div>
+
+          <div class="table-wrap">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th>Medicine</th>
+                  <th>Category</th>
+                  <th>Expiration Date</th>
+                  <th>Days Left</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (expiryAlertItems.length === 0) { %>
+                  <tr class="empty-row"><td colspan="4">No medicines are expired or expiring within 30 days.</td></tr>
+                <% } else { %>
+                  <% expiryAlertItems.forEach(function(m) { %>
+                    <tr>
+                      <td class="medicine-name"><%= m.medicine_name %></td>
+                      <td><%= m.category_name || '—' %></td>
+                      <td><%= new Date(m.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %></td>
+                      <td>
+                        <% if (m.daysLeft < 0) { %>
+                          <span class="badge badge--expired">Expired <%= Math.abs(m.daysLeft) %> day<%= Math.abs(m.daysLeft) === 1 ? '' : 's' %> ago</span>
+                        <% } else { %>
+                          <span class="<%= m.daysLeft <= 7 ? 'text-low-stock' : '' %>">
+                            <%= m.daysLeft %> day<%= m.daysLeft === 1 ? '' : 's' %>
+                          </span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── RECENT TRANSACTIONS ────────────────────── -->
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Recent Transactions</h2>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Medicine Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Recorded By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (recentTransactions.length === 0) { %>
+                <tr class="empty-row">
+                  <td colspan="5">No transactions recorded yet.</td>
+                </tr>
+              <% } else { %>
+                <% recentTransactions.forEach(function(tx) { %>
+                  <% const isRestock = tx.transaction_type === 'restock'; %>
+                  <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                  <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
+                  <tr>
+                    <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
+                    <td class="medicine-name"><%= tx.medicine_name %></td>
+                    <td>
+                      <span class="badge badge--<%= tx.transaction_type %>"><%= tx.transaction_type.toUpperCase() %></span>
+                    </td>
+                    <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>">
+                      <%= isRestock ? '+' : '-' %><%= tx.transaction_quantity %> Units
+                    </td>
+                    <td>
+                      <div class="tx-user">
+                        <div class="avatar avatar--<%= colorIndex %>"><%= initials %></div>
+                        <%= tx.first_name %> <%= tx.last_name %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <a href="/staff/transactions?tab=history"><button class="btn-primary btn-primary--below-table">View All Transactions <i data-lucide="arrow-right" class="ic"></i></button></a>
+      </section>
+
       <!-- ── QUICK ACTIONS ─────────────────────────────── -->
       <div class="staff-actions">
         <a href="/staff/inventory"><button class="btn-primary"><i data-lucide="package" class="ic"></i> View Inventory</button></a>

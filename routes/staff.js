@@ -45,11 +45,44 @@ router.get('/dashboard', async (req, res) => {
       [req.session.user.user_id]
     );
 
+    const [stockAlertItems] = await db.query(
+      `SELECT m.medicine_id, m.medicine_name, m.stock_quantity, m.stock_threshold, c.category_name
+       FROM medicines m
+       LEFT JOIN categories c ON m.category_id = c.category_id
+       WHERE m.stock_quantity < m.stock_threshold
+       ORDER BY m.stock_quantity ASC, (m.stock_threshold - m.stock_quantity) DESC
+       LIMIT 8`
+    );
+
+    const [expiryAlertItems] = await db.query(
+      `SELECT m.medicine_id, m.medicine_name, m.expiration_date, c.category_name,
+              DATEDIFF(m.expiration_date, CURDATE()) AS daysLeft
+       FROM medicines m
+       LEFT JOIN categories c ON m.category_id = c.category_id
+       WHERE m.expiration_date IS NOT NULL
+         AND m.expiration_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+       ORDER BY m.expiration_date ASC
+       LIMIT 8`
+    );
+
+    const [recentTransactions] = await db.query(
+      `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
+              m.medicine_name, u.first_name, u.last_name
+       FROM stock_transactions st
+       JOIN medicines m ON st.medicine_id = m.medicine_id
+       JOIN users u ON st.user_id = u.user_id
+       ORDER BY st.transaction_date DESC
+       LIMIT 10`
+    );
+
     res.render('staff/dashboard', {
       user: req.session.user,
       stats: { outOfStock, lowStock, expired, expiringSoon },
       approvedAwaitingDelivery,
       transactionsToday,
+      stockAlertItems,
+      expiryAlertItems,
+      recentTransactions,
       error: null
     });
   } catch (err) {
@@ -59,6 +92,9 @@ router.get('/dashboard', async (req, res) => {
       stats: { outOfStock: 0, lowStock: 0, expired: 0, expiringSoon: 0 },
       approvedAwaitingDelivery: 0,
       transactionsToday: 0,
+      stockAlertItems: [],
+      expiryAlertItems: [],
+      recentTransactions: [],
       error: 'Could not load dashboard data. Please try again.'
     });
   }
@@ -138,7 +174,7 @@ router.get('/inventory', async (req, res) => {
 
 // ── Shared loader for the Transactions page ──────────────────────
 async function loadTransactionsPage(res, sessionUser, tab, error = null) {
-  const validTabs = ['sale', 'disposal', 'delivery'];
+  const validTabs = ['sale', 'disposal', 'delivery', 'history'];
   const activeTab = validTabs.includes(tab) ? tab : 'sale';
 
   // Discontinued medicines can't be sold or disposed of, so they're left
@@ -150,6 +186,7 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
 
   let todaysEntries = [];
   let approvedDeliveries = [];
+  let allTransactions = [];
 
   if (activeTab === 'delivery') {
     [approvedDeliveries] = await db.query(
@@ -158,6 +195,16 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
        JOIN medicines m ON rr.medicine_id = m.medicine_id
        WHERE rr.status = 'Approved'
        ORDER BY rr.request_date ASC`
+    );
+  } else if (activeTab === 'history') {
+    [allTransactions] = await db.query(
+      `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
+              m.medicine_name, u.first_name, u.last_name
+       FROM stock_transactions st
+       JOIN medicines m ON st.medicine_id = m.medicine_id
+       JOIN users u ON st.user_id = u.user_id
+       ORDER BY st.transaction_date DESC
+       LIMIT 50`
     );
   } else {
     [todaysEntries] = await db.query(
@@ -177,6 +224,7 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
     medicines,
     todaysEntries,
     approvedDeliveries,
+    allTransactions,
     error
   });
 }
@@ -193,6 +241,7 @@ router.get('/transactions', async (req, res) => {
       medicines: [],
       todaysEntries: [],
       approvedDeliveries: [],
+      allTransactions: [],
       error: 'Could not load transactions. Please try again.'
     });
   }

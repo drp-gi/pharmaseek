@@ -97,12 +97,23 @@ router.get('/dashboard', async (req, res) => {
        LIMIT 10`
     );
 
+    const [recentTransactions] = await db.query(
+      `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
+              m.medicine_name, u.first_name, u.last_name
+       FROM stock_transactions st
+       JOIN medicines m ON st.medicine_id = m.medicine_id
+       JOIN users u ON st.user_id = u.user_id
+       ORDER BY st.transaction_date DESC
+       LIMIT 10`
+    );
+
     res.render('pharmacist/dashboard', {
       user: req.session.user,
       stats: { totalMedicines, lowStock, expiringSoon, pendingRestocks },
       lowStockItems,
       nearExpiryItems,
       pendingRestockItems,
+      recentTransactions,
       error: null
     });
   } catch (err) {
@@ -113,6 +124,7 @@ router.get('/dashboard', async (req, res) => {
       lowStockItems: [],
       nearExpiryItems: [],
       pendingRestockItems: [],
+      recentTransactions: [],
       error: 'Could not load dashboard data. Please try again.'
     });
   }
@@ -463,7 +475,7 @@ router.post('/inventory/:id/reactivate', async (req, res) => {
 
 // ── Shared loader for the Transactions page ──────────────────────
 async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = null) {
-  const validTabs = ['sale', 'disposal', 'delivery'];
+  const validTabs = ['sale', 'disposal', 'delivery', 'history'];
   const activeTab = validTabs.includes(tab) ? tab : 'sale';
 
   // Discontinued medicines can't be sold or disposed of, so they're left
@@ -475,6 +487,7 @@ async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = nul
 
   let todaysEntries = [];
   let approvedDeliveries = [];
+  let allTransactions = [];
 
   if (activeTab === 'delivery') {
     [approvedDeliveries] = await db.query(
@@ -483,6 +496,16 @@ async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = nul
        JOIN medicines m ON rr.medicine_id = m.medicine_id
        WHERE rr.status = 'Approved'
        ORDER BY rr.request_date ASC`
+    );
+  } else if (activeTab === 'history') {
+    [allTransactions] = await db.query(
+      `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
+              m.medicine_name, u.first_name, u.last_name
+       FROM stock_transactions st
+       JOIN medicines m ON st.medicine_id = m.medicine_id
+       JOIN users u ON st.user_id = u.user_id
+       ORDER BY st.transaction_date DESC
+       LIMIT 50`
     );
   } else {
     [todaysEntries] = await db.query(
@@ -502,6 +525,7 @@ async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = nul
     medicines,
     todaysEntries,
     approvedDeliveries,
+    allTransactions,
     error
   });
 }
@@ -518,6 +542,7 @@ router.get('/transactions', async (req, res) => {
       medicines: [],
       todaysEntries: [],
       approvedDeliveries: [],
+      allTransactions: [],
       error: 'Could not load transactions. Please try again.'
     });
   }

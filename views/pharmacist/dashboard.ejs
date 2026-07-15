@@ -159,6 +159,10 @@
         </div>
       </section>
 
+
+
+
+      
       <!-- ── PENDING RESTOCK REQUESTS ─────────────────── -->
       <% if (stats.pendingRestocks > 0) { %>
         <section class="panel">
@@ -210,6 +214,61 @@
           </div>
         </section>
       <% } %>
+
+
+      
+      <!-- ── RECENT TRANSACTIONS ────────────────────── -->
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Recent Transactions</h2>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Medicine Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Recorded By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (recentTransactions.length === 0) { %>
+                <tr class="empty-row">
+                  <td colspan="5">No transactions recorded yet.</td>
+                </tr>
+              <% } else { %>
+                <% recentTransactions.forEach(function(tx) { %>
+                  <% const isRestock = tx.transaction_type === 'restock'; %>
+                  <% const initials = tx.first_name[0] + tx.last_name[0]; %>
+                  <% const colorIndex = (tx.first_name.charCodeAt(0) + tx.last_name.charCodeAt(0)) % 5; %>
+                  <tr>
+                    <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
+                    <td class="medicine-name"><%= tx.medicine_name %></td>
+                    <td>
+                      <span class="badge badge--<%= tx.transaction_type %>"><%= tx.transaction_type.toUpperCase() %></span>
+                    </td>
+                    <td class="<%= isRestock ? 'qty-pos' : 'qty-neg' %>">
+                      <%= isRestock ? '+' : '-' %><%= tx.transaction_quantity %> Units
+                    </td>
+                    <td>
+                      <div class="tx-user">
+                        <div class="avatar avatar--<%= colorIndex %>"><%= initials %></div>
+                        <%= tx.first_name %> <%= tx.last_name %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <a href="/pharmacist/transactions?tab=history"><button class="btn-primary btn-primary--below-table">View All Transactions <i data-lucide="arrow-right" class="ic"></i></button></a>
+      </section>
+
 
 
       <p class="page-footer">
