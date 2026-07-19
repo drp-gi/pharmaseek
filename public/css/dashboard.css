@@ -542,6 +542,7 @@ table.tx-table {
    a light tint — since it's the more urgent of the two. */
 .badge--out-of-stock { background: #fee2e2; color: #DE1A58; }
 .badge--low-stock    { background: #DE1A58; color: #fee2e2; }
+.badge--in-stock     { background: #dcfce7; color: #15803d; }
 
 /* Approve / Dismiss — same fixed-width pill pattern as the row
    Activate/Deactivate toggle, so the two buttons never cause layout

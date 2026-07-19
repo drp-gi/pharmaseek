@@ -312,7 +312,7 @@ function wireSaleCart(opts) {
           submitErrorEl.textContent = `Could not record "${item.medicine_name}": ${err.message} Remaining items were not submitted.`;
           submitErrorEl.style.display = '';
           recordBtn.disabled = false;
-          recordBtn.textContent = 'Record Sale';
+          recordBtn.textContent = 'Record Items Sold';
           return;
         }
       }

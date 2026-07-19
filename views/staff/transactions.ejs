@@ -25,7 +25,7 @@
       <div class="topbar">
         <div>
           <h1>Transactions</h1>
-          <p>Record sales, disposals, and deliveries</p>
+          <p>Record items sold, disposals, and deliveries</p>
         </div>
         <div class="topbar__actions">
           <button class="btn-primary" id="openNewRequest" type="button">
@@ -49,7 +49,7 @@
 
       <!-- ── TABS ─────────────────────────────────────── -->
       <div class="report-tabs">
-        <a href="/staff/transactions?tab=sale" class="report-tab <%= tab === 'sale' ? 'active' : '' %>">Sale</a>
+        <a href="/staff/transactions?tab=sale" class="report-tab <%= tab === 'sale' ? 'active' : '' %>">Items Sold</a>
         <a href="/staff/transactions?tab=disposal" class="report-tab <%= tab === 'disposal' ? 'active' : '' %>">Disposal</a>
         <a href="/staff/transactions?tab=delivery" class="report-tab <%= tab === 'delivery' ? 'active' : '' %>">Delivery Check-in</a>
         <a href="/staff/transactions?tab=history" class="report-tab <%= tab === 'history' ? 'active' : '' %>">History</a>
@@ -63,14 +63,14 @@
         <% } else if (tab === 'delivery') { %>
           Confirm incoming deliveries for approved restock requests and update stock levels.
         <% } else { %>
-          A full log of past sales, disposals, and delivery check ins.
+          A full log of past items sold, disposals, and delivery check ins.
         <% } %>
       </p>
 
       <% if (tab === 'sale') { %>
         <!-- ── NEW SALE ENTRY (cart) ─────────────────────── -->
         <section class="panel">
-          <div class="panel__header"><h2>New Sale Entry</h2></div>
+          <div class="panel__header"><h2>Record Items Sold</h2></div>
           <div class="filter-row">
             <div class="filter-field medicine-search-field">
               <label for="sale_medicine_search">Search Medicine</label>
@@ -113,7 +113,7 @@
               <span class="cart-total__value" id="saleCartTotal">₱0.00</span>
             </div>
             <p class="alert alert--error" id="saleCartSubmitError" style="display:none;"></p>
-            <button type="button" class="btn-primary" id="saleRecordBtn">Record Sale</button>
+            <button type="button" class="btn-primary" id="saleRecordBtn">Record Items Sold</button>
           </div>
         </section>
 
@@ -121,10 +121,10 @@
 
         <!-- ── TODAY'S SALES ────────────────────────────── -->
         <section class="panel">
-          <div class="panel__header"><h2>Today's Sales</h2></div>
+          <div class="panel__header"><h2>Today's Items Sold</h2></div>
           <div class="tx-list">
             <% if (todaysEntries.length === 0) { %>
-              <p class="empty-catalog">No sales recorded today.</p>
+              <p class="empty-catalog">No items sold recorded today.</p>
             <% } else { %>
               <% todaysEntries.forEach(function(t) { %>
                 <div class="tx-list__row">
@@ -277,6 +277,7 @@
                 <% if (allTransactions.length === 0) { %>
                   <tr class="empty-row"><td colspan="7">No transactions recorded yet.</td></tr>
                 <% } else { %>
+                  <% const txTypeLabels = { restock: 'RESTOCK', sale: 'ITEMS SOLD', disposal: 'DISPOSAL' }; %>
                   <% allTransactions.forEach(function(tx) { %>
                     <% const isRestock = tx.transaction_type === 'restock'; %>
                     <% const initials = tx.first_name[0]; %>
@@ -285,7 +286,7 @@
                       <td><%= new Date(tx.transaction_date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' }) %></td>
                       <td class="medicine-name"><%= tx.medicine_name %></td>
                       <td>
-                        <span class="badge badge--<%= tx.transaction_type %>"><%= tx.transaction_type.toUpperCase() %></span>
+                        <span class="badge badge--<%= tx.transaction_type %>"><%= txTypeLabels[tx.transaction_type] || tx.transaction_type.toUpperCase() %></span>
                       </td>
                       <td class="qty-pos"><%= isRestock ? tx.transaction_quantity : 0 %></td>
                       <td class="qty-neg"><%= isRestock ? 0 : tx.transaction_quantity %></td>

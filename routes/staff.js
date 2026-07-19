@@ -195,7 +195,8 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
        JOIN medicines m ON rr.medicine_id = m.medicine_id
        WHERE rr.status = 'Approved'
        ORDER BY rr.request_date ASC`
-    );
+    );// yah
+
   } else if (activeTab === 'history') {
     [allTransactions] = await db.query(
       `SELECT st.transaction_id, st.transaction_type, st.transaction_quantity, st.transaction_date,
@@ -205,7 +206,7 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
        JOIN users u ON st.user_id = u.user_id
        ORDER BY st.transaction_date DESC
        LIMIT 50`
-    );
+    );// for history vesude
   } else {
     [todaysEntries] = await db.query(
       `SELECT st.transaction_id, st.transaction_quantity, st.transaction_date, st.disposal_reason,
