@@ -136,7 +136,7 @@ VALUES
 
 INSERT INTO pharmacy_info (pharmacy_id, pharmacy_name, address, contact_number, email)
 VALUES
-(1, 'City Center Pharmacy', '123 Health Blvd, Medical District, NY 10001', '+1 (555) 012-3456', 'contact@citycenterpharma.com');
+(1, 'PharmaSeek', 'Osmeña Blvd, Cebu City, 6000 Cebu, Philippines', '+63 32 123 4567', 'contact@pharmaseek.com');
 
 
 INSERT INTO categories (category_name, description)

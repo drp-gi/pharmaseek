@@ -2,10 +2,11 @@
 const express       = require('express');
 const router        = express.Router();
 const bcrypt          = require('bcryptjs');
+const PDFDocument     = require('pdfkit');
 const isAuthenticated = require('../middleware/authMiddleware');
 const authorizeRole   = require('../middleware/roleMiddleware');
 const db              = require('../db/connection');
-const { manilaTodayISO, daysBetween } = require('../utils/manilaTime');
+const { manilaTodayISO, dateOnlyISO, daysBetween } = require('../utils/manilaTime');
 
 // All admin routes require login + Admin role
 router.use(isAuthenticated);
@@ -322,6 +323,219 @@ router.get('/reports', async (req, res) => {
       logError: false,
       error: 'Could not load report data. Please try again.'
     });
+  }
+});
+
+// 'Mon D, YYYY' for a 'YYYY-MM-DD' value, read as a Manila calendar date.
+function formatReportDate(isoDate) {
+  return new Date(isoDate + 'T00:00:00Z').toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila'
+  });
+}
+
+// Renders a simple header row + data rows table at the current doc
+// position, breaking to a new page when a row would overflow the
+// bottom margin. Columns are positioned by explicit x/width rather than
+// pdfkit's text-flow cursor, so doc.y is resynced manually afterward.
+function drawTable(doc, headers, rows, colWidths, emptyLabel) {
+  const startX = doc.page.margins.left;
+  const rowHeight = 15;
+  let y = doc.y;
+
+  function drawRow(cells, font, color, size) {
+    if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      y = doc.page.margins.top;
+    }
+    doc.font(font).fontSize(size).fillColor(color);
+    let x = startX;
+    cells.forEach((cell, i) => {
+      doc.text(String(cell), x, y, { width: colWidths[i], ellipsis: true, lineBreak: false });
+      x += colWidths[i];
+    });
+    y += rowHeight;
+  }
+
+  drawRow(headers, 'Helvetica-Bold', '#374151', 9);
+  const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+  doc.moveTo(startX, y - 4).lineTo(startX + tableWidth, y - 4).strokeColor('#cbd3e0').stroke();
+
+  if (rows.length === 0) {
+    doc.font('Helvetica').fontSize(9.5).fillColor('#9ca3af').text(emptyLabel, startX, y, { width: tableWidth });
+    y += rowHeight;
+  } else {
+    rows.forEach((r) => drawRow(r, 'Helvetica', '#111827', 9));
+  }
+
+  doc.y = y + 8;
+  doc.x = startX;
+}
+
+// GET /admin/reports/weekly-pdf — downloads a PDF detailing stock
+// movement, expiration tracking, and restock requests for the trailing
+// 7 days (today included).
+router.get('/reports/weekly-pdf', async (req, res) => {
+  const to = manilaTodayISO();
+  const from = manilaDateOffsetISO(-6);
+  const weekAhead = manilaDateOffsetISO(6);
+
+  try {
+    const [[pharmacy]] = await db.query(`SELECT address FROM pharmacy_info WHERE pharmacy_id = 1`);
+
+    const [stockTransactions] = await db.query(
+      `SELECT st.transaction_date, st.transaction_type, st.transaction_quantity, m.medicine_name,
+              m.stock_quantity, u.first_name, u.last_name
+       FROM stock_transactions st
+       JOIN medicines m ON st.medicine_id = m.medicine_id
+       JOIN users u ON st.user_id = u.user_id
+       WHERE st.transaction_date BETWEEN ? AND ?
+       ORDER BY st.transaction_date DESC
+       LIMIT 200`,
+      [from, `${to} 23:59:59`]
+    );
+
+    const [expiredRows] = await db.query(
+      `SELECT medicine_name, stock_quantity, expiration_date FROM medicines
+       WHERE expiration_date IS NOT NULL AND expiration_date < CURDATE() AND status = 'Active'
+       ORDER BY expiration_date ASC`
+    );
+
+    const [expiringRows] = await db.query(
+      `SELECT medicine_name, stock_quantity, expiration_date FROM medicines
+       WHERE expiration_date IS NOT NULL AND expiration_date BETWEEN ? AND ? AND status = 'Active'
+       ORDER BY expiration_date ASC`,
+      [to, weekAhead]
+    );
+
+    const [restockRequests] = await db.query(
+      `SELECT rr.request_date, rr.quantity_requested, rr.status, m.medicine_name, u.first_name, u.last_name
+       FROM restock_requests rr
+       JOIN medicines m ON rr.medicine_id = m.medicine_id
+       LEFT JOIN users u ON rr.user_id = u.user_id
+       WHERE rr.request_date BETWEEN ? AND ?
+       ORDER BY rr.request_date DESC`,
+      [from, `${to} 23:59:59`]
+    );
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="pharmaseek-weekly-report-${to}.pdf"`);
+    doc.pipe(res);
+
+    function sectionTitle(title) {
+      doc.moveDown(1);
+      doc.font('Helvetica-Bold').fontSize(13).fillColor('#111827').text(title);
+      doc.moveTo(doc.x, doc.y + 2).lineTo(doc.page.width - doc.page.margins.right, doc.y + 2)
+        .strokeColor('#cbd3e0').stroke();
+      doc.moveDown(0.5);
+      doc.font('Helvetica').fontSize(10.5).fillColor('#111827');
+    }
+
+    doc.font('Helvetica-Bold').fontSize(20).text('PharmaSeek', { align: 'center' });
+    doc.font('Helvetica').fontSize(10).fillColor('#6b7280').text(pharmacy?.address || 'Cebu City, Cebu, Philippines', { align: 'center' });
+    doc.moveDown(0.4);
+    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111827').text('Weekly Summary Report', { align: 'center' });
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10).fillColor('#6b7280')
+      .text(`Report period: ${formatReportDate(from)} - ${formatReportDate(to)}`, { align: 'center' })
+      .text(`Generated on ${formatReportDate(to)} by ${req.session.user.first_name} ${req.session.user.last_name}`, { align: 'center' });
+    doc.fillColor('#111827');
+
+    // ── Stock Movement ──────────────────────────────────────────
+    const stockByType = { restock: { cnt: 0, qty: 0 }, sale: { cnt: 0, qty: 0 }, disposal: { cnt: 0, qty: 0 } };
+    stockTransactions.forEach((r) => {
+      const bucket = stockByType[r.transaction_type];
+      if (bucket) { bucket.cnt += 1; bucket.qty += r.transaction_quantity; }
+    });
+    const typeLabels = { restock: 'Restock', sale: 'Sale', disposal: 'Disposal' };
+
+    sectionTitle('Stock Movement Summary');
+    Object.keys(typeLabels).forEach((t) => {
+      doc.text(`${typeLabels[t]}: ${stockByType[t].cnt} transaction(s), ${stockByType[t].qty} unit(s)`);
+    });
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold').text(`Total transactions this week: ${stockTransactions.length}`);
+    doc.font('Helvetica');
+
+    doc.moveDown(0.6);
+    doc.font('Helvetica-Bold').fontSize(10.5).text('Transaction Details');
+    doc.moveDown(0.3);
+    drawTable(
+      doc,
+      ['Date', 'Medicine', 'Type', 'Qty', 'Remaining', 'Staff'],
+      stockTransactions.map((r) => [
+        formatReportDate(dateOnlyISO(r.transaction_date)),
+        r.medicine_name,
+        r.transaction_type.charAt(0).toUpperCase() + r.transaction_type.slice(1),
+        r.transaction_quantity,
+        r.stock_quantity,
+        `${r.first_name} ${r.last_name[0]}.`
+      ]),
+      [70, 165, 65, 45, 65, 85],
+      'No stock movement recorded this week.'
+    );
+
+    // ── Expiration Tracking ─────────────────────────────────────
+    sectionTitle('Expiration Tracking');
+    doc.text(`Already expired (still active in inventory): ${expiredRows.length}`);
+    doc.text(`Expiring within the next 7 days: ${expiringRows.length}`);
+
+    doc.moveDown(0.6);
+    doc.font('Helvetica-Bold').fontSize(10.5).text('Already Expired');
+    doc.moveDown(0.3);
+    drawTable(
+      doc,
+      ['Medicine', 'Stock Qty', 'Expired On'],
+      expiredRows.map((r) => [r.medicine_name, r.stock_quantity, formatReportDate(dateOnlyISO(r.expiration_date))]),
+      [280, 100, 115],
+      'No expired medicines currently in inventory.'
+    );
+
+    doc.moveDown(0.6);
+    doc.font('Helvetica-Bold').fontSize(10.5).text('Expiring Within 7 Days');
+    doc.moveDown(0.3);
+    drawTable(
+      doc,
+      ['Medicine', 'Stock Qty', 'Expires On'],
+      expiringRows.map((r) => [r.medicine_name, r.stock_quantity, formatReportDate(dateOnlyISO(r.expiration_date))]),
+      [280, 100, 115],
+      'No medicines expiring within the next 7 days.'
+    );
+
+    // ── Restock Requests ─────────────────────────────────────────
+    const restockByStatus = { Pending: 0, Approved: 0, Completed: 0, Cancelled: 0 };
+    restockRequests.forEach((r) => { restockByStatus[r.status] = (restockByStatus[r.status] || 0) + 1; });
+
+    sectionTitle('Restock Requests Raised This Week');
+    Object.keys(restockByStatus).forEach((s) => {
+      doc.text(`${s}: ${restockByStatus[s]}`);
+    });
+
+    doc.moveDown(0.6);
+    doc.font('Helvetica-Bold').fontSize(10.5).text('Request Details');
+    doc.moveDown(0.3);
+    drawTable(
+      doc,
+      ['Date', 'Medicine', 'Qty Requested', 'Status', 'Requested By'],
+      restockRequests.map((r) => [
+        formatReportDate(dateOnlyISO(r.request_date)),
+        r.medicine_name,
+        r.quantity_requested,
+        r.status,
+        r.first_name ? `${r.first_name} ${r.last_name[0]}.` : '-'
+      ]),
+      [70, 165, 90, 80, 90],
+      'No restock requests raised this week.'
+    );
+
+    doc.moveDown(1.5);
+    doc.fontSize(8).fillColor('#9ca3af')
+      .text(`PharmaSeek Inventory Management System - generated ${formatReportDate(to)}`, { align: 'center' });
+
+    doc.end();
+  } catch (err) {
+    console.error('Weekly report PDF error:', err);
+    res.status(500).send('Could not generate the weekly report. Please try again.');
   }
 });
 

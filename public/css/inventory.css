@@ -55,6 +55,13 @@
   font-weight: 700;
 }
 
+.category-group__divider {
+  border: none;
+  border-top: 1px solid #cbd3e0;
+  margin: 24px 0 0;
+}
+.category-group:last-of-type .category-group__divider { display: none; }
+
 .empty-catalog {
   text-align: center;
   color: #9ca3af;

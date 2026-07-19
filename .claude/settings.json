@@ -20,7 +20,9 @@
       "Bash(node /tmp/pwtest/test_race.js)",
       "Bash(node --check c:/Users/yaa/pharmaseek/routes/staff.js)",
       "Bash(node --check c:/Users/yaa/pharmaseek/routes/pharmacist.js)",
-      "Bash(node --check c:/Users/yaa/pharmaseek/utils/medicineStatus.js)"
+      "Bash(node --check c:/Users/yaa/pharmaseek/utils/medicineStatus.js)",
+      "Bash(node app.js)",
+      "Bash(cat /tmp_server.log)"
     ]
   }
 }
