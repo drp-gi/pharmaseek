@@ -99,7 +99,8 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// POST /admin/users — create a new user
+// POST /admin/users
+// creates a brand new user account, only an admin can do this, everyone else's login gets set up for them.
 router.post('/users', async (req, res) => {
   const { first_name, last_name, username, email, temp_password, position, status } = req.body;
 
@@ -759,11 +760,8 @@ router.post('/settings', async (req, res) => {
   }
 });
 
-// ── Notifications (bell dropdown) ─────────────────────────────
-// Computed live from current inventory/restock state rather than a stored
-// log — there's no notifications table, so "recent" here means "currently
-// true", plus the last few actual Management Log entries which do have
-// real timestamps.
+// ── notifications (bell dropdown) ─────────────────────────────
+// computed live from current inventory/restock state rather than a stored log, there's no notifications table, so "recent" here mostly means "currently true", plus the last few actual management log entries tacked on since those do have real timestamps.
 function plural(n, word, pluralWord) {
   return n === 1 ? word : (pluralWord || word + 's');
 }
@@ -788,9 +786,7 @@ router.get('/notifications', async (req, res) => {
       `SELECT COUNT(*) AS pendingRestocks FROM restock_requests WHERE status = 'Pending'`
     );
 
-    // Real timestamped events go first so the newest activity is always on
-    // top; the live status alerts below have no event time of their own
-    // (they're just "currently true"), so they're appended after.
+    // real timestamped events go first so the newest activity always sits on top, the live status alerts below have no event time of their own, they're just "currently true", so those get appended after.
     const [recentLogs] = await db.query(
       `SELECT ml.findings, ml.date_logged, u.first_name, u.last_name
        FROM management_logs ml
