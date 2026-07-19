@@ -668,8 +668,8 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-// POST /admin/settings — updates pharmacy info, the admin's own profile,
-// and (optionally) their password, all from the page's single Save button.
+// POST /admin/settings
+// updates pharmacy info, the admin's own profile, and, optionally, their password, all from the one Save button on the page.
 router.post('/settings', async (req, res) => {
   const {
     pharmacy_name, address, contact_number, pharmacy_email,
