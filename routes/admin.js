@@ -1,4 +1,5 @@
 // routes/admin.js
+// everything the admin role can do: dashboard, full user management (create/edit/activate/deactivate), the reports panel and its weekly pdf export, management logs, and pharmacy-wide settings. admin doesn't touch the medicine catalog directly, that's pharmacist territory.
 const express       = require('express');
 const router        = express.Router();
 const bcrypt          = require('bcryptjs');
@@ -8,11 +9,12 @@ const authorizeRole   = require('../middleware/roleMiddleware');
 const db              = require('../db/connection');
 const { manilaTodayISO, dateOnlyISO, daysBetween } = require('../utils/manilaTime');
 
-// All admin routes require login + Admin role
+// every route below needs a logged-in session and the Admin position, checked once here instead of repeating it in every handler.
 router.use(isAuthenticated);
 router.use(authorizeRole(['Admin']));
 
 // GET /admin/dashboard
+// the admin's at a glance numbers: how many active users, how many restock requests are still pending, this month's revenue from sales, and a short feed of recent activity across the whole pharmacy.
 router.get('/dashboard', async (req, res) => {
   try {
     const [[{ activeUsers }]] = await db.query(
@@ -58,9 +60,7 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// ── Shared loader for the User Management page ────────────────
-// errorSource ('add' | 'edit' | null) tells the view which modal, if
-// any, should reopen automatically after a failed submission.
+// shared loader for the user management page, errorSource ('add', 'edit', or null) tells the view which modal, if any, needs to reopen automatically after a failed submission.
 async function loadUsersPage(res, sessionUser, error = null, errorSource = null) {
   const [users] = await db.query(
     `SELECT user_id, first_name, last_name, username, email, position, status
@@ -77,9 +77,7 @@ async function loadUsersPage(res, sessionUser, error = null, errorSource = null)
   });
 }
 
-// Admin accounts are always kept Active — this mirrors the disabled
-// toggle in the UI so it can't be bypassed by editing the role/status
-// through the Add or Edit forms instead.
+// admin accounts are always kept active, this mirrors the disabled toggle in the ui so nobody can bypass it by editing the role/status through the add or edit forms instead.
 function resolveStatus(position, status) {
   if (position === 'Admin') return 'Active';
   return status === 'Inactive' ? 'Inactive' : 'Active';
@@ -125,12 +123,8 @@ router.post('/users', async (req, res) => {
   }
 });
 
-// POST /admin/users/:id — update an existing user's details
-// Role changes are blocked (silently kept at the current role) for:
-//   - your own account
-//   - the sole remaining Admin account
-// This is enforced here, not just in the UI, since the form field can
-// be disabled client-side but that alone doesn't stop a direct request.
+// POST /admin/users/:id
+// updates an existing user's details. role changes get silently blocked, kept at whatever the current role already is, for your own account and for the sole remaining admin account. this is enforced here on the server, not just in the ui, since a disabled form field client-side doesn't stop someone from firing a request directly.
 router.post('/users/:id', async (req, res) => {
   const { first_name, last_name, username, email, position, status } = req.body;
   const targetId = req.params.id;
@@ -164,7 +158,7 @@ router.post('/users/:id', async (req, res) => {
       [first_name, last_name, username, email || null, finalPosition, resolveStatus(finalPosition, status), targetId]
     );
 
-    // Keep the session in sync if the admin just edited their own details
+    // keep the session in sync if the admin just edited their own details, otherwise the sidebar/topbar would keep showing the old name until next login.
     if (isSelf) {
       req.session.user.first_name = first_name;
       req.session.user.last_name  = last_name;
@@ -182,8 +176,7 @@ router.post('/users/:id', async (req, res) => {
 });
 
 // POST /admin/users/:id/toggle-status
-// Admin accounts are excluded even if this is called directly, since the
-// UI disables the toggle for them.
+// admin accounts are excluded even if this route gets hit directly, the WHERE clause below enforces it, not just the disabled toggle in the ui.
 router.post('/users/:id/toggle-status', async (req, res) => {
   try {
     await db.query(
@@ -197,11 +190,11 @@ router.post('/users/:id/toggle-status', async (req, res) => {
   res.redirect('/admin/users');
 });
 
-// ── Reports ──────────────────────────────────────────────────
+// ── reports ──────────────────────────────────────────────────
 const REPORT_TABS = ['stock', 'expiration', 'restock'];
 const REPORT_LIMIT = 50;
 
-// 'YYYY-MM-DD' for a number of days before/after today in Manila.
+// gives back 'yyyy-mm-dd' for however many days before or after today, counted in manila time rather than whatever timezone the server happens to be running in.
 function manilaDateOffsetISO(days) {
   const base = new Date(manilaTodayISO() + 'T00:00:00Z');
   base.setUTCDate(base.getUTCDate() + days);
@@ -209,6 +202,7 @@ function manilaDateOffsetISO(days) {
 }
 
 // GET /admin/reports
+// the three-tab reports panel: stock movement, expiration tracking, and restock request status, all filterable by a date range and, for stock movement, by transaction type too.
 router.get('/reports', async (req, res) => {
   const tab = REPORT_TABS.includes(req.query.tab) ? req.query.tab : 'stock';
 
@@ -326,17 +320,14 @@ router.get('/reports', async (req, res) => {
   }
 });
 
-// 'Mon D, YYYY' for a 'YYYY-MM-DD' value, read as a Manila calendar date.
+// turns a 'yyyy-mm-dd' value into a friendly 'mon d, yyyy' string, read as a manila calendar date so it lines up with everything else on this page.
 function formatReportDate(isoDate) {
   return new Date(isoDate + 'T00:00:00Z').toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila'
   });
 }
 
-// Renders a simple header row + data rows table at the current doc
-// position, breaking to a new page when a row would overflow the
-// bottom margin. Columns are positioned by explicit x/width rather than
-// pdfkit's text-flow cursor, so doc.y is resynced manually afterward.
+// renders a simple header row plus data rows at the current pdfkit doc position, breaking to a new page whenever the next row would overflow the bottom margin. columns get positioned by explicit x/width instead of pdfkit's normal text-flow cursor, so doc.y gets resynced by hand once the table's done.
 function drawTable(doc, headers, rows, colWidths, emptyLabel) {
   const startX = doc.page.margins.left;
   const rowHeight = 15;
@@ -371,9 +362,8 @@ function drawTable(doc, headers, rows, colWidths, emptyLabel) {
   doc.x = startX;
 }
 
-// GET /admin/reports/weekly-pdf — downloads a PDF detailing stock
-// movement, expiration tracking, and restock requests for the trailing
-// 7 days (today included).
+// GET /admin/reports/weekly-pdf
+// downloads a pdf detailing stock movement, expiration tracking, and restock requests for the trailing 7 days, today included. built with pdfkit rather than a headless browser since it's just text and simple tables, no need for the extra weight.
 router.get('/reports/weekly-pdf', async (req, res) => {
   const to = manilaTodayISO();
   const from = manilaDateOffsetISO(-6);
@@ -441,7 +431,7 @@ router.get('/reports/weekly-pdf', async (req, res) => {
       .text(`Generated on ${formatReportDate(to)} by ${req.session.user.first_name} ${req.session.user.last_name}`, { align: 'center' });
     doc.fillColor('#111827');
 
-    // ── Stock Movement ──────────────────────────────────────────
+    // ── stock movement ──────────────────────────────────────────
     const stockByType = { restock: { cnt: 0, qty: 0 }, sale: { cnt: 0, qty: 0 }, disposal: { cnt: 0, qty: 0 } };
     stockTransactions.forEach((r) => {
       const bucket = stockByType[r.transaction_type];
@@ -475,7 +465,7 @@ router.get('/reports/weekly-pdf', async (req, res) => {
       'No stock movement recorded this week.'
     );
 
-    // ── Expiration Tracking ─────────────────────────────────────
+    // ── expiration tracking ─────────────────────────────────────
     sectionTitle('Expiration Tracking');
     doc.text(`Already expired (still active in inventory): ${expiredRows.length}`);
     doc.text(`Expiring within the next 7 days: ${expiringRows.length}`);
@@ -502,7 +492,7 @@ router.get('/reports/weekly-pdf', async (req, res) => {
       'No medicines expiring within the next 7 days.'
     );
 
-    // ── Restock Requests ─────────────────────────────────────────
+    // ── restock requests ─────────────────────────────────────────
     const restockByStatus = { Pending: 0, Approved: 0, Completed: 0, Cancelled: 0 };
     restockRequests.forEach((r) => { restockByStatus[r.status] = (restockByStatus[r.status] || 0) + 1; });
 
@@ -539,7 +529,8 @@ router.get('/reports/weekly-pdf', async (req, res) => {
   }
 });
 
-// POST /admin/reports/logs — submit a management log entry
+// POST /admin/reports/logs
+// files a new management log entry after the admin reviews a report and finds something worth noting, optionally linked to a specific medicine.
 router.post('/reports/logs', async (req, res) => {
   const { findings, corrective_action, medicine_id, return_to } = req.body;
   const base = (return_to && return_to.startsWith('/admin/reports')) ? return_to : '/admin/reports';
@@ -562,10 +553,10 @@ router.post('/reports/logs', async (req, res) => {
   }
 });
 
-// ── Management Logs (history view) ────────────────────────────
+// ── management logs (history view) ────────────────────────────
 const LOGS_PAGE_SIZE = 6;
 
-// [1, 2, '...', 5, 6, 7, '...', 12] style windowed page list
+// builds a windowed page list like [1, 2, '...', 5, 6, 7, '...', 12], always keeps the first and last page plus a small window around the current one, so pagination stays readable even with a hundred pages.
 function buildPageNumbers(current, total) {
   const pages = [];
   for (let p = 1; p <= total; p++) {
@@ -584,6 +575,7 @@ function truncate(text, len) {
 }
 
 // GET /admin/management-logs
+// the paginated history view of every findings/corrective-action entry ever filed, searchable by findings text and filterable by date range.
 router.get('/management-logs', async (req, res) => {
   const from = req.query.from || manilaDateOffsetISO(-30);
   const to = req.query.to || manilaTodayISO();
@@ -645,9 +637,10 @@ router.get('/management-logs', async (req, res) => {
   }
 });
 
-// ── Settings ─────────────────────────────────────────────────
+// ── settings ─────────────────────────────────────────────────
 
 // GET /admin/settings
+// loads both halves of the settings page at once: the pharmacy_info singleton row (name, address, contact) and the admin's own profile.
 router.get('/settings', async (req, res) => {
   try {
     const [[pharmacy]] = await db.query(`SELECT * FROM pharmacy_info WHERE pharmacy_id = 1`);

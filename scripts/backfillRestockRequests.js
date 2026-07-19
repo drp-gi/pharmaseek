@@ -2,7 +2,7 @@
 //
 // One-time backfill for the auto-restock-request feature. Sales and
 // disposals now auto-generate a Pending restock request when they push a
-// medicine below its threshold — but that only covers *future* stock
+// medicine below its threshold,but that only covers *future* stock
 // movements. This script catches anything that's already below threshold
 // right now (e.g. from before this feature existed) and creates the
 // missing Pending requests, using the same suggested-quantity formula.

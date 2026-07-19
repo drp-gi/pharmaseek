@@ -1,8 +1,8 @@
-/* ============================================================
+/* 
    login.css — PharmaSeek Login Page
-   ============================================================ */
+    */
 
-/* ── Reset & Base ─────────────────────────────────────────── */
+/*  Reset & Base  */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -23,7 +23,7 @@ body {
     radial-gradient(circle at 80% 20%, rgba(59,130,246,0.06) 0%, transparent 50%);
 }
 
-/* ── Page wrapper ─────────────────────────────────────────── */
+/*  Page wrapper  */
 .page-wrapper {
   width: 100%;
   padding: 24px;
@@ -32,7 +32,7 @@ body {
   justify-content: center;
 }
 
-/* ── Card ─────────────────────────────────────────────────── */
+/*  Card  */
 .card {
   display: flex;
   width: 100%;
@@ -45,7 +45,7 @@ body {
     0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* ── Left Panel ───────────────────────────────────────────── */
+/*  Left Panel  */
 .card__left {
   position: relative;
   flex: 0 0 42%;
@@ -161,7 +161,7 @@ body {
   color: rgba(255,255,255,0.85);
 }
 
-/* ── Right Panel ──────────────────────────────────────────── */
+/*  Right Panel  */
 .card__right {
   flex: 1;
   background: #fff;
@@ -303,7 +303,7 @@ body {
   text-align: center;
 }
 
-/* ── Responsive ───────────────────────────────────────────── */
+/*  Responsive  */
 @media (max-width: 640px) {
   .card {
     flex-direction: column;

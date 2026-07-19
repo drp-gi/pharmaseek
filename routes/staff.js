@@ -1,4 +1,5 @@
 // routes/staff.js
+// everything the staff role can do: dashboard, read-only catalog browsing, recording sales/disposals, delivery check-ins, raising restock requests, and their own settings. no add/edit/delete on medicines here, that's pharmacist-only.
 const express         = require('express');
 const router          = express.Router();
 const bcrypt          = require('bcryptjs');
@@ -9,11 +10,12 @@ const { confirmDelivery } = require('../utils/confirmDelivery');
 const { maybeCreateRestockRequest } = require('../utils/autoRestock');
 const { getStatusBadge } = require('../utils/medicineStatus');
 
-// All staff routes require login + Staff role
+// every route below needs a logged-in session and the Staff position, these two run first on every request so we don't have to repeat the check inside each handler.
 router.use(isAuthenticated);
 router.use(authorizeRole(['Staff']));
 
 // GET /staff/dashboard
+// pulls together every "at a glance" number staff sees on login: out of stock/low/expired/expiring counts, approved deliveries waiting on check-in, how many transactions this staff member logged today, the actual alert lists, and a short recent-activity feed across everyone.
 router.get('/dashboard', async (req, res) => {
   try {
     const [[{ outOfStock }]] = await db.query(
@@ -100,7 +102,8 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// GET /staff/inventory — read-only medicine catalog (no add/edit/delete)
+// GET /staff/inventory
+// read-only medicine catalog for staff, no add/edit/delete buttons here, just browsing, searching by name, and filtering by category, grouped the same way the pharmacist's version is.
 router.get('/inventory', async (req, res) => {
   const search   = req.query.search || '';
   const category = req.query.category || 'All';
@@ -110,8 +113,7 @@ router.get('/inventory', async (req, res) => {
       `SELECT category_id, category_name FROM categories ORDER BY category_name`
     );
 
-    // Discontinued medicines are hidden from active inventory — Staff's
-    // catalog is read-only and only ever shows what's still sellable.
+    // discontinued medicines never show up here on purpose, staff's view of the catalog only ever shows what's actually sellable right now, hence filtering status = 'Active' before anything else.
     const clauses = [`m.status = 'Active'`];
     const params = [];
     if (search) {
@@ -172,13 +174,12 @@ router.get('/inventory', async (req, res) => {
   }
 });
 
-// ── Shared loader for the Transactions page ──────────────────────
+// shared loader for the transactions page, one function backs all four tabs (sale, disposal, delivery, history) since they're really just one page with different content underneath, and every route below needs to re-render this same page on both success and failure, just with a different active tab and/or an error message.
 async function loadTransactionsPage(res, sessionUser, tab, error = null) {
   const validTabs = ['sale', 'disposal', 'delivery', 'history'];
   const activeTab = validTabs.includes(tab) ? tab : 'sale';
 
-  // Discontinued medicines can't be sold or disposed of, so they're left
-  // out of this picker.
+  // same deal as the inventory picker above, a discontinued medicine can't be sold or disposed of, so it has no business showing up in the medicine search box on the sale/disposal tabs.
   const [medicines] = await db.query(
     `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, stock_threshold, unit_price, image_path
      FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
@@ -195,7 +196,8 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
        JOIN medicines m ON rr.medicine_id = m.medicine_id
        WHERE rr.status = 'Approved'
        ORDER BY rr.request_date ASC`
-    );// yah
+    );
+    // oldest approved request first, whoever's been waiting longest for their delivery should be at the top of the check-in list, not buried under whatever got approved most recently.
 
   } else if (activeTab === 'history') {
     [allTransactions] = await db.query(
@@ -206,7 +208,8 @@ async function loadTransactionsPage(res, sessionUser, tab, error = null) {
        JOIN users u ON st.user_id = u.user_id
        ORDER BY st.transaction_date DESC
        LIMIT 50`
-    );// for history vesude
+    );
+    // capped at 50, newest first, this is just a quick recent-activity log for staff, not the full audit trail (that lives on the admin reports page with actual date-range filtering).
   } else {
     [todaysEntries] = await db.query(
       `SELECT st.transaction_id, st.transaction_quantity, st.transaction_date, st.disposal_reason,
@@ -248,9 +251,8 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
-// POST /staff/restock-requests — Staff can raise a request from the
-// Transactions page, same as Pharmacist's own New Request modal, but
-// approval remains Pharmacist-only (routes/pharmacist.js handles that).
+// POST /staff/restock-requests
+// staff can raise a request straight from the transactions page, same as the pharmacist's own new request modal, but approving it stays pharmacist-only, that logic lives in routes/pharmacist.js.
 router.post('/restock-requests', async (req, res) => {
   const { medicine_id, quantity_requested, notes } = req.body;
   const validTabs = ['sale', 'disposal', 'delivery', 'history'];
@@ -273,7 +275,8 @@ router.post('/restock-requests', async (req, res) => {
   }
 });
 
-// POST /staff/transactions/sale — record a sale, decrementing stock
+// POST /staff/transactions/sale
+// records one sale for one medicine and knocks the quantity off stock, locks the row with FOR UPDATE first so two staff members selling the same medicine at once can't both read a stale stock number.
 router.post('/transactions/sale', async (req, res) => {
   const { medicine_id, quantity } = req.body;
   const qty = Number(quantity);
@@ -328,7 +331,8 @@ router.post('/transactions/sale', async (req, res) => {
   }
 });
 
-// POST /staff/transactions/disposal — record a disposal, decrementing stock
+// POST /staff/transactions/disposal
+// same locking pattern as the sale route above, but for stock being thrown out instead of sold, and it requires a reason since disposals need a paper trail for why the stock is gone.
 router.post('/transactions/disposal', async (req, res) => {
   const { medicine_id, quantity, disposal_reason } = req.body;
   const qty = Number(quantity);
@@ -384,8 +388,7 @@ router.post('/transactions/disposal', async (req, res) => {
 });
 
 // POST /staff/transactions/delivery-checkin/:id
-// Requires the actually-received quantity from the Confirm Delivery popup
-// (not just trusting the original requested quantity) before stock moves.
+// needs the actually-received quantity from the confirm delivery popup before stock moves, we don't just trust the original requested quantity since real deliveries can come up short or over.
 router.post('/transactions/delivery-checkin/:id', async (req, res) => {
   const qty = Number(req.body.quantity_received);
 
@@ -405,7 +408,7 @@ router.post('/transactions/delivery-checkin/:id', async (req, res) => {
   res.redirect('/staff/transactions?tab=delivery');
 });
 
-// ── Settings ─────────────────────────────────────────────────
+// ── settings ─────────────────────────────────────────────────
 
 // GET /staff/settings
 router.get('/settings', async (req, res) => {
@@ -426,8 +429,8 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-// POST /staff/settings — updates the staff member's own profile and
-// (optionally) their password, from the page's single Save button.
+// POST /staff/settings
+// updates the staff member's own profile and, optionally, their password, all from the one Save button on the page.
 router.post('/settings', async (req, res) => {
   const {
     first_name, last_name, username, email,
@@ -510,9 +513,8 @@ router.post('/settings', async (req, res) => {
   }
 });
 
-// ── Notifications (bell dropdown) ─────────────────────────────
-// Computed live from current inventory/restock state — there's no
-// notifications table, so "recent" here means "currently true".
+// ── notifications (bell dropdown) ─────────────────────────────
+// computed live from current inventory/restock state since there's no notifications table, so "recent" here really just means "currently true".
 function plural(n, word, pluralWord) {
   return n === 1 ? word : (pluralWord || word + 's');
 }

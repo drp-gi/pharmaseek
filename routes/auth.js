@@ -4,7 +4,7 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const db      = require('../db/connection');
 
-// ─── GET / → redirect to login ───────────────────────────────────────────────
+// ── GET / → redirect to login 
 router.get('/', (req, res) => {
   if (req.session && req.session.user) {
     return redirectToDashboard(res, req.session.user.position);
@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
   return res.redirect('/login');
 });
 
-// ─── GET /login ───────────────────────────────────────────────────────────────
+//  GET /login 
 router.get('/login', (req, res) => {
   // If already logged in, skip login page
   if (req.session && req.session.user) {
@@ -21,7 +21,7 @@ router.get('/login', (req, res) => {
   res.render('auth/login', { error: null });
 });
 
-// ─── POST /login ──────────────────────────────────────────────────────────────
+//  POST /login 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -84,7 +84,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ─── POST /logout ─────────────────────────────────────────────────────────────
+//  POST /logout 
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) console.error('Logout error:', err);
@@ -92,7 +92,7 @@ router.post('/logout', (req, res) => {
   });
 });
 
-// ─── Helper: redirect to correct dashboard by role ───────────────────────────
+//  Helper: redirect to correct dashboard by role 
 function redirectToDashboard(res, position) {
   const dashboardMap = {
     Admin:      '/admin/dashboard',

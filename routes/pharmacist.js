@@ -1,4 +1,5 @@
 // routes/pharmacist.js
+// everything the pharmacist role can do: dashboard, full medicine catalog management (add/edit/discontinue/reactivate), approving or dismissing restock requests, recording sales/disposals, delivery check-ins, and their own settings. this is the one role with write access to the medicine catalog.
 const express         = require('express');
 const router           = express.Router();
 const multer           = require('multer');
@@ -11,11 +12,11 @@ const { confirmDelivery } = require('../utils/confirmDelivery');
 const { maybeCreateRestockRequest } = require('../utils/autoRestock');
 const { getStatusBadge } = require('../utils/medicineStatus');
 
-// All pharmacist routes require login + Pharmacist role
+// every route below needs a logged-in session and the Pharmacist position, checked once here so we don't repeat it in every handler.
 router.use(isAuthenticated);
 router.use(authorizeRole(['Pharmacist']));
 
-// ── Medicine image upload ───────────────────────────────────────
+// ── medicine image upload ───────────────────────────────────────
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'medicines');
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
@@ -28,15 +29,14 @@ const upload = multer({
       cb(null, `${Date.now()}-${base}${ext}`);
     }
   }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // cap uploads at 5mb, plenty for a medicine photo, small enough not to eat disk space
   fileFilter: (req, file, cb) => {
     if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) return cb(null, true);
     cb(new Error('Only JPG, PNG, WEBP, or AVIF images are allowed.'));
   }
 });
 
-// Wraps upload.single so multer errors (bad file type, too large) show
-// as a normal page error instead of crashing the request.
+// wraps upload.single so a multer error, bad file type or file too big, shows up as a normal page error instead of crashing the request with an unhandled exception.
 function uploadMedicineImage(req, res, next) {
   upload.single('image')(req, res, (err) => {
     if (!err) return next();
@@ -47,6 +47,7 @@ function uploadMedicineImage(req, res, next) {
 }
 
 // GET /pharmacist/dashboard
+// same idea as the staff dashboard but pharmacist version siya, pulls stock counts, pending restock requests that need approval, and recent activity across the whole pharmacy, not just this one user's own actions.
 router.get('/dashboard', async (req, res) => {
   
   try {
@@ -135,8 +136,7 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// Redirects back to wherever the action was triggered from (Dashboard or
-// the Restock Requests page), falling back if return_to is missing/unsafe.
+// sends the pharmacist back to wherever they clicked approve/dismiss from, dashboard or the restock requests page, falls back to the given default if return_to is missing or looks unsafe.
 function safeRedirect(req, res, fallback) {
   const returnTo = req.body.return_to;
   const isSafe = returnTo
@@ -144,7 +144,7 @@ function safeRedirect(req, res, fallback) {
   res.redirect(isSafe ? returnTo : fallback);
 }
 
-// ── Shared loader for the Restock Requests page ─────────────────
+// shared loader for the restock requests page, one tab per status (pending/approved/completed/cancelled), reused by the GET route and every POST action below so they can all re-render the same page after doing their thing.
 async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
   const validTabs = ['Pending', 'Approved', 'Completed', 'Cancelled'];
   const activeTab = validTabs.includes(tab) ? tab : 'Pending';
@@ -161,8 +161,7 @@ async function loadRestockRequestsPage(res, sessionUser, tab, error = null) {
     [activeTab]
   );
 
-  // Discontinued medicines aren't restockable, so they're left out of the
-  // request dropdown entirely.
+  // discontinued medicines aren't restockable, so they're left out of the request dropdown entirely, no point suggesting a restock for something no longer sold.
   const [medicines] = await db.query(
     `SELECT medicine_id, medicine_name, stock_quantity, stock_threshold
      FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
@@ -193,7 +192,8 @@ router.get('/restock-requests', async (req, res) => {
   }
 });
 
-// POST /pharmacist/restock-requests — create a new request
+// POST /pharmacist/restock-requests
+// creates a brand new pending request, this is the pharmacist's own version of the same "new request" flow staff gets on their transactions page.
 router.post('/restock-requests', async (req, res) => {
   const { medicine_id, quantity_requested, notes } = req.body;
 
@@ -215,11 +215,7 @@ router.post('/restock-requests', async (req, res) => {
 });
 
 // POST /pharmacist/restock-requests/:id/approve
-// The Pending tab's Requested Qty column is an editable input tied to
-// this form via the `form` attribute — whatever value is in it at
-// submit time (system suggestion or a Pharmacist edit) overwrites
-// quantity_requested. Forms without that field (e.g. the Dashboard's
-// Approve button) just update status, leaving quantity untouched.
+// the pending tab's requested qty column is an editable input wired to this form through the `form` attribute, so whatever's typed in it at submit time, the system's own suggestion or a pharmacist's manual edit, overwrites quantity_requested. forms that don't carry that field, like the dashboard's quick approve button, just flip the status and leave the quantity as it already was.
 router.post('/restock-requests/:id/approve', async (req, res) => {
   const qty = Number(req.body.quantity_requested);
   try {
@@ -242,15 +238,7 @@ router.post('/restock-requests/:id/approve', async (req, res) => {
 });
 
 // POST /pharmacist/restock-requests/:id/dismiss
-// Dismissing doesn't change stock, so it normally just goes quiet until a
-// real event (a Sale, Disposal, or Delivery on that medicine) re-triggers
-// the auto-check on its own. A medicine at 0 stock is the one exception —
-// nothing can be sold/disposed from empty stock, and Delivery Check-in
-// needs an Approved request that would no longer exist once this is
-// cancelled, so it's the one case with no other event left to ever catch
-// it again. Rather than cancel it and immediately regenerate a duplicate,
-// the request is simply refused outright — the UI explains why before it
-// ever reaches here, but this is the actual enforcement, not just the copy.
+// dismissing doesn't touch stock at all, it just goes quiet until a real event on that medicine (a sale, a disposal, a delivery) re-triggers the auto-restock check on its own later. a medicine sitting at 0 stock is the one case that breaks that assumption though, nothing can be sold or disposed from empty stock, and delivery check-in needs an approved request that would stop existing the moment this got cancelled, so there's no other event left that could ever catch it again. rather than cancel it and just regenerate a duplicate a second later, we refuse the dismiss outright here. the ui already explains why before the request ever gets this far, but this is the real enforcement, not just the copy on the button.
 router.post('/restock-requests/:id/dismiss', async (req, res) => {
   try {
     const [[request]] = await db.query(
@@ -274,9 +262,7 @@ router.post('/restock-requests/:id/dismiss', async (req, res) => {
 });
 
 // POST /pharmacist/restock-requests/:id/confirm-delivery
-// Same verification step and stock-moving logic as the Staff Transactions
-// page's Delivery Check-in — requires the actually-received quantity
-// before the request is completed and stock is updated.
+// same verification step and stock-moving logic as staff's delivery check-in, needs the actually-received quantity before this request gets marked complete and stock actually updates.
 router.post('/restock-requests/:id/confirm-delivery', async (req, res) => {
   const qty = Number(req.body.quantity_received);
 
@@ -296,7 +282,7 @@ router.post('/restock-requests/:id/confirm-delivery', async (req, res) => {
   safeRedirect(req, res, '/pharmacist/dashboard');
 });
 
-// ── Shared loader for the Inventory page ────────────────────────
+// ── shared loader for the inventory page ────────────────────────
 async function loadInventoryPage(res, sessionUser, filters, error = null) {
   const { search = '', category = 'All' } = filters;
 
@@ -319,9 +305,7 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
   }
   const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
-  // Both Active and Discontinued medicines are fetched together — the
-  // catalog page toggles between them client-side (via the category/
-  // status dropdown) rather than round-tripping to the server.
+  // active and discontinued medicines both get fetched together here, the catalog page toggles between them client-side through the category/status dropdown instead of round-tripping to the server for it.
   const [medicines] = await db.query(
     `SELECT m.medicine_id, m.medicine_name, m.brand_name, m.medicine_type, m.dose,
             m.description, m.unit_price, m.stock_quantity, m.stock_threshold,
@@ -336,8 +320,7 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
     params
   );
 
-  // Discontinued medicines keep their own badge in the card (handled in the
-  // view) rather than also carrying a stock/expiry status.
+  // discontinued medicines get their own badge in the card, that's handled in the view, so they don't also need a stock/expiry status computed for them here.
   medicines.forEach((med) => {
     med.statusBadge = med.status === 'Discontinued' ? null : getStatusBadge(med);
   });
@@ -366,6 +349,7 @@ async function loadInventoryPage(res, sessionUser, filters, error = null) {
 }
 
 // GET /pharmacist/inventory
+// full read/write medicine catalog for the pharmacist, same grouping and filtering as staff's version but with add/edit/discontinue actions layered on top.
 router.get('/inventory', async (req, res) => {
   const filters = { search: req.query.search || '', category: req.query.category || 'All' };
   try {
@@ -384,7 +368,8 @@ router.get('/inventory', async (req, res) => {
   }
 });
 
-// POST /pharmacist/inventory — add a new medicine
+// POST /pharmacist/inventory
+// adds a brand new medicine to the catalog, runs through uploadMedicineImage first so the optional photo lands on disk before we ever touch the database.
 router.post('/inventory', uploadMedicineImage, async (req, res) => {
   const {
     medicine_name, brand_name, medicine_type, dose, description,
@@ -417,9 +402,8 @@ router.post('/inventory', uploadMedicineImage, async (req, res) => {
   }
 });
 
-// POST /pharmacist/inventory/:id — edit an existing medicine
-// If no new file is uploaded, existing_image_path (a hidden field carrying
-// the medicine's current image_path) is kept so the photo isn't wiped out.
+// POST /pharmacist/inventory/:id
+// edits an existing medicine's details. if no new photo gets uploaded this time, existing_image_path, a hidden field carrying the medicine's current image_path, gets kept so the old photo doesn't get wiped out by accident.
 router.post('/inventory/:id', uploadMedicineImage, async (req, res) => {
   const {
     medicine_name, brand_name, medicine_type, dose, description,
@@ -453,7 +437,8 @@ router.post('/inventory/:id', uploadMedicineImage, async (req, res) => {
   }
 });
 
-// POST /pharmacist/categories — add a category from the medicine form, no page reload
+// POST /pharmacist/categories
+// quick-add a category straight from the medicine form's dropdown, returns json so the front end can drop it into the select without reloading the whole page.
 router.post('/categories', async (req, res) => {
   const category_name = (req.body.category_name || '').trim();
   if (!category_name) return res.status(400).json({ error: 'Category name is required.' });
@@ -470,7 +455,8 @@ router.post('/categories', async (req, res) => {
   }
 });
 
-// POST /pharmacist/suppliers — add a supplier from the medicine form, no page reload
+// POST /pharmacist/suppliers
+// same quick-add pattern as categories above, but for suppliers, same reason: keep the pharmacist inside the medicine form instead of bouncing them to a separate page.
 router.post('/suppliers', async (req, res) => {
   const company_name = (req.body.company_name || '').trim();
   const phone_number = (req.body.phone_number || '').trim();
@@ -489,9 +475,7 @@ router.post('/suppliers', async (req, res) => {
 });
 
 // POST /pharmacist/inventory/:id/discontinue
-// Soft-delete: hides the medicine from active inventory (catalog, sale/
-// disposal pickers, restock requests) while keeping its stock_transactions
-// and management_logs history intact. Reversible via /reactivate.
+// this is a soft delete, it hides the medicine from active inventory (the catalog, sale/disposal pickers, restock requests) while keeping its stock_transactions and management_logs history fully intact. fully reversible through /reactivate below.
 router.post('/inventory/:id/discontinue', async (req, res) => {
   try {
     await db.query(`UPDATE medicines SET status = 'Discontinued' WHERE medicine_id = ?`, [req.params.id]);
@@ -503,6 +487,7 @@ router.post('/inventory/:id/discontinue', async (req, res) => {
 });
 
 // POST /pharmacist/inventory/:id/reactivate
+// flips a discontinued medicine back to active, undoes the soft delete above, everything about it (stock, history) was preserved the whole time so there's nothing else to restore.
 router.post('/inventory/:id/reactivate', async (req, res) => {
   try {
     await db.query(`UPDATE medicines SET status = 'Active' WHERE medicine_id = ?`, [req.params.id]);
@@ -513,13 +498,12 @@ router.post('/inventory/:id/reactivate', async (req, res) => {
   }
 });
 
-// ── Shared loader for the Transactions page ──────────────────────
+// shared loader for the transactions page, pharmacist's own version of the same four-tab layout staff gets (sale, disposal, delivery, history), reused by the GET route and every POST handler below on both success and failure.
 async function loadPharmacistTransactionsPage(res, sessionUser, tab, error = null) {
   const validTabs = ['sale', 'disposal', 'delivery', 'history'];
   const activeTab = validTabs.includes(tab) ? tab : 'sale';
 
-  // Discontinued medicines can't be sold or disposed of, so they're left
-  // out of this picker.
+  // discontinued medicines can't be sold or disposed of, so they're left out of this picker same as everywhere else.
   const [medicines] = await db.query(
     `SELECT medicine_id, medicine_name, brand_name, medicine_type, stock_quantity, unit_price, image_path
      FROM medicines WHERE status = 'Active' ORDER BY medicine_name`
@@ -588,7 +572,8 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
-// POST /pharmacist/transactions/sale — record a sale, decrementing stock
+// POST /pharmacist/transactions/sale
+// records one sale and knocks the quantity off stock, same FOR UPDATE row locking as staff's version so two people ringing up the same medicine at once can't both work off a stale stock number.
 router.post('/transactions/sale', async (req, res) => {
   const { medicine_id, quantity } = req.body;
   const qty = Number(quantity);
@@ -643,7 +628,8 @@ router.post('/transactions/sale', async (req, res) => {
   }
 });
 
-// POST /pharmacist/transactions/disposal — record a disposal, decrementing stock
+// POST /pharmacist/transactions/disposal
+// same locking pattern as the sale route, but for stock getting thrown out instead of sold, and it requires a reason since a disposal needs a paper trail explaining why the stock is gone.
 router.post('/transactions/disposal', async (req, res) => {
   const { medicine_id, quantity, disposal_reason } = req.body;
   const qty = Number(quantity);
@@ -699,8 +685,7 @@ router.post('/transactions/disposal', async (req, res) => {
 });
 
 // POST /pharmacist/transactions/checkin/:id
-// Requires the actually-received quantity from the Confirm Delivery popup
-// (not just trusting the original requested quantity) before stock moves.
+// needs the actually-received quantity from the confirm delivery popup before stock moves, we don't just trust the original requested quantity since real deliveries can come up short or over.
 router.post('/transactions/checkin/:id', async (req, res) => {
   const qty = Number(req.body.quantity_received);
 
@@ -720,7 +705,7 @@ router.post('/transactions/checkin/:id', async (req, res) => {
   res.redirect('/pharmacist/transactions?tab=delivery');
 });
 
-// ── Settings ─────────────────────────────────────────────────
+// ── settings ─────────────────────────────────────────────────
 
 // GET /pharmacist/settings
 router.get('/settings', async (req, res) => {
@@ -741,8 +726,8 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-// POST /pharmacist/settings — updates the pharmacist's own profile and
-// (optionally) their password, from the page's single Save button.
+// POST /pharmacist/settings
+// updates the pharmacist's own profile and, optionally, their password, all from the one Save button on the page.
 router.post('/settings', async (req, res) => {
   const {
     first_name, last_name, username, email,
@@ -825,9 +810,8 @@ router.post('/settings', async (req, res) => {
   }
 });
 
-// ── Notifications (bell dropdown) ─────────────────────────────
-// Computed live from current inventory/restock state — there's no
-// notifications table, so "recent" here means "currently true".
+// ── notifications (bell dropdown) ─────────────────────────────
+// computed live from current inventory/restock state since there's no notifications table, so "recent" here really just means "currently true".
 function plural(n, word, pluralWord) {
   return n === 1 ? word : (pluralWord || word + 's');
 }

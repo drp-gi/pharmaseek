@@ -1,7 +1,7 @@
-/* ============================================================
-   management-logs.css — PharmaSeek Management Logs (Admin)
+/* 
+   management-logs.css , PharmaSeek Management Logs (Admin)
    (extends dashboard.css + users.css + reports.css)
-   ============================================================ */
+    */
 
 /* .filter-field input (reports.css) has the same CSS specificity as
    .search input (dashboard.css) and loads after it, so it was silently

@@ -1,6 +1,6 @@
-/* ============================================================
+/* 
    dashboard.css — PharmaSeek Admin Dashboard
-   ============================================================ */
+    */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -18,15 +18,14 @@ a { text-decoration: none; color: inherit; }
 ul { list-style: none; }
 button { font-family: inherit; }
 
-/* ── Icons (Lucide SVGs) ──────────────────────────────────── */
+/*  Icons (fromm Lucide SVGs hehe)  */
 .ic {
   flex-shrink: 0;
   stroke-width: 2px;
 }
 
-/* ── Layout ───────────────────────────────────────────────── */
-/* App-shell: the whole page never scrolls — the sidebar and the
-   main content are each their own fixed-height scroll container,
+/*  Layout  */
+/* App-shell: the whole page never scrolls — the sidebar and the main content are each their own fixed-height scroll container,
    so the sidebar stays in place while .main scrolls independently. */
 html, body {
   height: 100%;
@@ -37,7 +36,7 @@ html, body {
   overflow: hidden;
 }
 
-/* ── Sidebar ──────────────────────────────────────────────── */
+/*  Sidebar  */
 .sidebar {
   flex: 0 0 260px;
   height: 100vh;
@@ -167,7 +166,7 @@ html, body {
   color: #fff;
 }
 
-/* ── Main content ─────────────────────────────────────────── */
+/*  Main content  */
 .main {
   position: relative;
   flex: 1;
@@ -264,8 +263,8 @@ html, body {
   border: 1.5px solid #fff;
 }
 
-/* ── Notifications dropdown (bell) ───────────────────────────
-   Positioned the same way as .bell itself — absolute within .main,
+/*  Notifications dropdown (bell)  */
+/* Positioned the same way as .bell itself — absolute within .main,
    which is why it stays pinned on screen rather than scrolling away
    with page content. Injected by notifications.js on every page. */
 .notif-panel {
@@ -361,7 +360,7 @@ hr.divider {
   margin: 0 0 28px;
 }
 
-/* ── Stat cards ───────────────────────────────────────────── */
+/*  Stat cards  */
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -409,7 +408,7 @@ hr.divider {
   color: #111827;
 }
 
-/* ── Panels ───────────────────────────────────────────────── */
+/*  Panels  */
 .panel {
   background: #fff;
   border: 1px solid #e5e9f0;

@@ -1,8 +1,7 @@
-/* ============================================================
+/* 
    users.css — PharmaSeek User Management (extends dashboard.css)
-   ============================================================ */
-
-/* ── Toolbar: tabs + search ───────────────────────────────── */
+    */
+/*  Toolbar: tabs + search  */
 .toolbar {
   display: flex;
   align-items: center;
@@ -57,7 +56,7 @@
   font-weight: 500;
 }
 
-/* ── Panel eyebrow label ──────────────────────────────────── */
+/*  Panel eyebrow label  */
 .panel__eyebrow {
   font-size: 0.75rem;
   font-weight: 800;
@@ -80,14 +79,14 @@
 }
 .full-name { font-weight: 700; color: #111827; }
 
-/* ── Role / status badges ─────────────────────────────────── */
+/*  Role / status badges  */
 .badge-role--admin      { background: #e5e7eb; color: #374151; }
 .badge-role--pharmacist { background: #dbeafe; color: #1d4ed8; }
 .badge-role--staff      { background: #f1f5f9; color: #475569; }
 .badge-status--active   { background: #dcfce7; color: #15803d; }
 .badge-status--inactive { background: #f1f5f9; color: #6b7280; }
 
-/* ── Row actions ──────────────────────────────────────────── */
+/*  Row actions  */
 .row-actions {
   display: flex;
   align-items: center;
@@ -174,7 +173,7 @@
   pointer-events: none;
 }
 
-/* ── Pagination ───────────────────────────────────────────── */
+/*  Pagination  */
 .pagination {
   display: flex;
   align-items: center;
@@ -214,7 +213,7 @@
 .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .page-btn--nav .ic { width: 14px; height: 14px; }
 
-/* ── Add User modal ───────────────────────────────────────── */
+/*  Add User modal  */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -359,7 +358,7 @@
   padding-top: 6px;
 }
 
-/* ── Responsive ───────────────────────────────────────────── */
+/*  Responsive  */
 @media (max-width: 640px) {
   .form-row { grid-template-columns: 1fr; }
   .search--wide input { width: 100%; }

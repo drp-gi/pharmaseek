@@ -28,7 +28,7 @@
   box-shadow: 0 0 0 3px rgba(29, 110, 216, 0.12);
 }
 
-/* ── Category groups ──────────────────────────────────────── */
+/*  Category groups  */
 .category-group { margin-bottom: 12px; }
 .category-group__header {
   display: flex;
@@ -69,8 +69,7 @@
   font-size: 0.9rem;
 }
 
-/* ── Catalog filter note (Discontinued / Expired / Low Stock / Out
-   of Stock views) ─────────────────────────────────────────── */
+/*  Catalog filter note (Discontinued / Expired / Low Stock / Outof Stock views)  */
 .catalog-filter-note {
   display: flex;
   align-items: center;
@@ -86,7 +85,7 @@
 }
 .catalog-filter-note .ic { width: 15px; height: 15px; color: #9ca3af; }
 
-/* ── Medicine cards grid ──────────────────────────────────── */
+/*  Medicine cards grid  */
 .medicine-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -202,7 +201,7 @@
 
 .badge--category { background: #eef1f5; color: #475569; }
 
-/* ── Detail modal ─────────────────────────────────────────── */
+/*  Detail modal  */
 .detail-modal .modal { max-width: 620px; }
 .detail-image {
   position: relative;
@@ -300,7 +299,7 @@
 .btn-danger-outline:hover { background: #fef2f2; }
 .btn-danger-outline .ic { width: 15px; height: 15px; }
 
-/* ── Remove confirmation modal ────────────────────────────── */
+/*  Remove confirmation modal  */
 .modal--sm { max-width: 420px; }
 .confirm-modal__body {
   padding: 20px 24px 24px;
@@ -330,7 +329,7 @@
 }
 .btn-danger:hover { background: #b91c1c; }
 
-/* ── Add/Edit Medicine form ───────────────────────────────── */
+/*  Add/Edit Medicine form  */
 .upload-row {
   display: flex;
   gap: 12px;
@@ -424,7 +423,7 @@
   margin-top: 6px;
 }
 
-/* ── Responsive ───────────────────────────────────────────── */
+/*  Responsive  */
 @media (max-width: 640px) {
   .catalog-toolbar { flex-direction: column; }
   .detail-stats { grid-template-columns: repeat(2, 1fr); }
